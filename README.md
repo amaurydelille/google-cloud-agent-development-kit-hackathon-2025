@@ -8,7 +8,25 @@ A comprehensive platform that helps entrepreneurs validate and develop their bus
 
 ## 🚀 Project Overview
 
+This platform transforms raw business ideas into actionable insights through intelligent analysis, market research, and strategic recommendations. Built with Google Cloud ADK, it leverages multiple specialized A# Google Cloud ADK Hackathon 2025
+
+**AI-Powered Business Idea Analyzer**
+
+A comprehensive platform that helps entrepreneurs validate and develop their business ideas using Google Cloud's Agent Development Kit (ADK) and AI technologies.
+
+---
+
+## 🚀 Project Overview
+
 This platform transforms raw business ideas into actionable insights through intelligent analysis, market research, and strategic recommendations. Built with Google Cloud ADK, it leverages multiple specialized AI agents to provide comprehensive business intelligence.
+
+---
+
+## ✨ Core Features
+
+### 1. Business Idea Input & Parsing
+
+**What it does:** Transforms user-submitted businesI agents to provide comprehensive business intelligence.
 
 ---
 
