@@ -26,14 +26,6 @@ This platform transforms raw business ideas into actionable insights through int
 
 ### 1. Business Idea Input & Parsing
 
-**What it does:** Transforms user-submitted businesI agents to provide comprehensive business intelligence.
-
----
-
-## ✨ Core Features
-
-### 1. Business Idea Input & Parsing
-
 **What it does:** Transforms user-submitted business ideas into structured, analyzable data
 
 **How it works:**
