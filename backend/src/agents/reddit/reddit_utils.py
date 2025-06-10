@@ -4,13 +4,12 @@ import asyncio
 import time
 
 # Add the root backend directory to the Python path
-backend_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+backend_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 sys.path.append(backend_root)
 
 import requests
 import json
 from utils.requests import SafeRequest
-
 
 def search_subreddits(keywords: list[str], limit: int = 25):
     url = f"https://www.reddit.com/subreddits/search.json"

@@ -11,12 +11,24 @@ logger = logging.getLogger(__name__)
 backend_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(backend_root)
 
-from google.adk.agents import LlmAgent, ParallelAgent
+from google.adk.agents import BaseAgent, LlmAgent, ParallelAgent
+from google.adk.agents.invocation_context import InvocationContext
 from google.genai import types
 from reddit_utils import search_subreddits, search_posts_from_subreddits_parallel
 from pydantic import BaseModel
+from google.adk.events import Event
+from typing import AsyncGenerator
+from google.adk.sessions import InMemorySessionService
+from google.adk.runners import Runner
 
-class RedditAgent:
+# Contexts refers to the information available yo our agent and its tools during
+# specific operations. It's like a background knowledge and resources needed to
+# perform the task.
+
+SESSION_ID = "reddit_session"
+USER_ID = "reddit_user"
+
+class RedditAgent():
     class SummaryOutput(BaseModel):
         summary: str
 
@@ -24,14 +36,32 @@ class RedditAgent:
         pros: list[str]
         cons: list[str]
 
+    keywords: list[str]
+    posts: list | None = None
+    summarizer_agent: LlmAgent | None = None
+    pros_cons_agent: LlmAgent | None = None
+    summarizer_instructions: str | None = None
+    pros_cons_instructions: str | None = None
+
     def __init__(self, keywords: list[str]):
         logger.info(f"Initializing RedditAgent with keywords: {keywords}")
         self.keywords = keywords
 
     async def initialize_agents(self):
         self.posts = await self.get_relevant_posts_from_subreddits_by_keywords(self.keywords)
+
+        self.session_service = InMemorySessionService()
+        self.session = await self.session_service.create_session(
+            session_id=SESSION_ID,
+            user_id=USER_ID,
+            app_name="RedditAgent",
+        )
+
+        print(self.session)
+
         logger.info(f"Found {len(self.posts)} total posts from all subreddits")
 
+        # Summarizer agent - SUB AGENT
         logger.info("Creating summarizer agent instructions")
         self.summarizer_instructions = f"""
         You are a helpful assistant that summarizes posts from a given subreddit without losing
@@ -59,6 +89,7 @@ class RedditAgent:
             disallow_transfer_to_peers=True
         )
 
+        # Pros and cons agent - SUB AGENT
         logger.info("Creating pros/cons agent instructions")
         self.pros_cons_instructions = f"""
         You have a sharp eye for business opportunities and trends, you are able to identify the most relevant posts and classify them
@@ -90,11 +121,26 @@ class RedditAgent:
         )
         logger.info("RedditAgent initialization completed")
 
+        # Parallel agent - MAIN AGENT
+        logger.info("Creating parallel agent")
+        self.parallel_agent = ParallelAgent(
+            name="Parallel",
+            description="Run the summarizer and pros/cons agents in parallel",
+            sub_agents=[self.summarizer_agent, self.pros_cons_agent],
+        )
+
+        # Runner agent - MANAGER AGENT
+        logger.info("Creating runner agent instructions")
+        self.runner_agent = Runner(
+            agent=self.parallel_agent,
+            app_name="RedditRunnerAgent",
+            session_service=self.session_service
+        )
+
     async def get_relevant_posts_from_subreddits_by_keywords(self, keywords: list[str], limit: int = 25):
         logger.info(f"Searching for subreddits with keywords: {keywords}, limit: {limit}")
         subreddits = search_subreddits(keywords, limit)
         logger.info(f"Found {len(subreddits)} relevant subreddits")
-        print(subreddits)
         
         logger.info("Fetching posts from all subreddits in parallel...")
         posts = await search_posts_from_subreddits_parallel(subreddits, limit)
@@ -102,42 +148,33 @@ class RedditAgent:
         logger.info(f"Total posts collected: {len(posts)}")
         return posts
 
-    async def run(self):
-        await self.initialize_agents()
-        
-        logger.info("Starting Reddit analysis with parallel agents")
-        manager_agent = ParallelAgent(
-            name="Manager",
-            description="Manage the sub-agents",
-            sub_agents=[self.summarizer_agent, self.pros_cons_agent]
-        )
-        logger.info("Created parallel agent manager")
-        
-        agent_event_generator = manager_agent.run_async()
-        logger.info("Started async agent execution")
-        
-        async for event in agent_event_generator:
-            logger.info(f"Received agent event: {type(event).__name__}")
-            logger.debug(f"Event details: {event}")
-            yield event
-        
-        logger.info("Reddit analysis completed")
-
+    async def call_agent_async(self):
+        await self.initialize_agents() # Until this function is called, the agents are not initialized
+        async for event in self.runner_agent.run_async(
+            user_id=self.session.user_id,
+            session_id=SESSION_ID,
+            new_message=types.Content(parts=[types.Part(text="Analyze reddit for business idea.")])
+        ):
+            print(f"  [Event] Author: {event.author}, Type: {type(event).__name__}, Final: {event.is_final_response()}, Content: {event.content}")
+            if event.is_final_response():
+                if event.content and event.content.parts[0].text:
+                    final_response = event.content.parts[0].text
+                elif event.actions and event.actions.escalate:
+                    final_response = "I'm sorry, I'm not able to analyze the posts. Please try again."
+                break
+        print(final_response)
 
 if __name__ == "__main__":
+
     async def main():
         logger.info("Starting Reddit Agent application")
         reddit_agent = RedditAgent(keywords=["real estate", "asset management"])
         logger.info("Reddit Agent created, starting analysis")
-        
-        results = []
-        async for event in reddit_agent.run():
-            results.append(event)
-        
+
+        await reddit_agent.call_agent_async()
+
         logger.info("Analysis completed, processing results")
-        print(json.dumps(results, indent=4, default=str))
-        return results
-    
-    asyncio.run(main())
+  
+    asyncio.run(main()) 
     
 
