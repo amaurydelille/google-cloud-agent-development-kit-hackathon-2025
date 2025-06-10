@@ -9,6 +9,8 @@ class SafeRequest:
     _start_time_reddit = time.time()
     _last_request_time = 0
 
+    _count_google = 0 # Google API limits are 100 requests per day
+
     @staticmethod
     def __request(url: str, method: str = 'GET', params: dict = {}, headers: dict = {}, 
                 data: dict = {}, retries: int = 3, verbose: bool = False) -> dict:
@@ -18,7 +20,7 @@ class SafeRequest:
                 response.raise_for_status()
                 response_data = response.json() 
                 if verbose:
-                    print(f"Request response: {json.dumps(response_data, indent=4)}")
+                    print(f"Request successful for {url}")
                 return response_data
             except req.exceptions.RequestException as e:
                 if hasattr(e, 'response') and e.response and e.response.status_code == 429:
@@ -66,6 +68,20 @@ class SafeRequest:
             SafeRequest._last_request_time = time.time()
             return SafeRequest.__request(url, 'GET', params, headers, data, retries, verbose)
             
+        except req.exceptions.RequestException as e:
+            if verbose:
+                print(f"Request failed: {e}")
+            raise e
+        
+    @staticmethod
+    def google_request(url: str, params: dict = {}, headers: dict = {}, 
+                    data: dict = {}, retries: int = 5, verbose: bool = False) -> dict:
+        try:
+            if SafeRequest._count_google >= 99:
+                raise req.exceptions.RequestException("Google API limit reached")
+            
+            SafeRequest._count_google += 1
+            return SafeRequest.__request(url, 'GET', params, headers, data, retries, verbose)
         except req.exceptions.RequestException as e:
             if verbose:
                 print(f"Request failed: {e}")

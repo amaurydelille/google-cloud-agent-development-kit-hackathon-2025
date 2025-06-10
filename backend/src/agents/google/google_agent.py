@@ -3,7 +3,7 @@ import os
 import asyncio
 import json
 import logging
-from google.adk.agents import BaseAgent, LlmAgent, ParallelAgent
+from google.adk.agents import BaseAgent, LlmAgent, SequentialAgent
 from google.adk.runners import Runner
 from google_utils import search_google, fetch_website_content
 from google.genai import types
@@ -36,7 +36,6 @@ class GoogleAgent():
     async def initialize_agents(self):
         SEARCH_INSTRUCTION = f"""
         You are a search agent that can search the web for information given a query.
-        You can use the search_google tool to search the web for information.
         Your role is to analyze the search results and return the {self.k} most items
         that are the most relevant to the query. You have a sharp eye for business
         opportunities and you are able select the items that will bring the most 
@@ -44,7 +43,7 @@ class GoogleAgent():
 
         Here is the query: {self.query}
 
-        Here are the search results: {self.search_results}
+        Here are the search results: {json.dumps(self.search_results, indent=2)}
         """
 
         self.search_agent = LlmAgent(
@@ -53,10 +52,41 @@ class GoogleAgent():
             instruction=SEARCH_INSTRUCTION,
             output_schema=SearchOutput,
             model="gemini-2.0-flash",
-            # tools=[search_google], # Cannot be enabled with output_schema
             generate_content_config=types.GenerateContentConfig(
                 temperature=0.3
-            )
+            ),
+            disallow_transfer_to_parent=True,
+            disallow_transfer_to_peers=True
+        )
+
+        FETCH_WEBSITE_INSTRUCTION = f"""
+        You are a website content agent that can fetch the content of websites given their URL.
+        You can use the fetch_website_content tool to fetch the content of a website.
+        Your role is to fetch the content of every URL and to summarize the content of the websites
+        and relate it to the query, from a business perspective. You will have to return a
+        concise but relevant enough summary of what you found on every website. Your summary
+        should be in the same language as the query and summarize every website in one.
+
+        Here is the query: {self.query}
+        """
+
+        self.fetch_website_agent = LlmAgent(
+            name="fetch_website_agent",
+            description="A agent that can fetch the content of a website",
+            instruction=FETCH_WEBSITE_INSTRUCTION,
+            model="gemini-2.0-flash",
+            tools=[fetch_website_content],
+            generate_content_config=types.GenerateContentConfig(
+                temperature=0.3
+            ),
+            disallow_transfer_to_parent=True,
+            disallow_transfer_to_peers=True
+        )
+
+        self.sequential_agent = SequentialAgent(
+            sub_agents=[self.search_agent, self.fetch_website_agent],
+            name="sequential_agent",
+            description="A agent that can search the web for information and fetch the content of a website",
         )
 
         self.session_service = InMemorySessionService()
@@ -68,7 +98,7 @@ class GoogleAgent():
 
         self.runner_agent = Runner(
             app_name="google_app",
-            agent=self.search_agent,
+            agent=self.sequential_agent,
             session_service=self.session_service,
         )
 
