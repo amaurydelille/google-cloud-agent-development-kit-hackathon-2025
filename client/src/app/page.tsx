@@ -27,386 +27,513 @@ interface AnalysisResults {
   };
 }
 
+interface AnalysisStage {
+  id: string;
+  title: string;
+  description: string;
+  logo: React.ReactNode;
+  duration: number;
+}
+
 export default function Home() {
   const [businessIdea, setBusinessIdea] = useState('');
   const [analyzing, setAnalyzing] = useState(false);
   const [results, setResults] = useState<AnalysisResults | null>(null);
-  const [activeTab, setActiveTab] = useState('input');
   const [progress, setProgress] = useState(0);
+  const [currentStage, setCurrentStage] = useState(0);
+  const [completedStages, setCompletedStages] = useState<string[]>([]);
+
+  const analysisStages: AnalysisStage[] = [
+    {
+      id: 'google',
+      title: 'Google Search Analysis',
+      description: `Searching "${businessIdea.slice(0, 30)}${businessIdea.length > 30 ? '...' : ''}" on Google`,
+      logo: (
+        <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      ),
+      duration: 800
+    },
+    {
+      id: 'reddit',
+      title: 'Reddit Community Insights',
+      description: 'Analyzing Reddit discussions and user sentiment',
+      logo: (
+        <svg className="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+        </svg>
+      ),
+      duration: 700
+    },
+    {
+      id: 'market',
+      title: 'Market Intelligence',
+      description: 'Gathering market size and growth data',
+      logo: (
+        <svg className="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+      ),
+      duration: 600
+    },
+    {
+      id: 'competition',
+      title: 'Competitive Landscape',
+      description: 'Analyzing competitors and market positioning',
+      logo: (
+        <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+        </svg>
+      ),
+      duration: 500
+    },
+    {
+      id: 'trends',
+      title: 'Trend Analysis',
+      description: 'Identifying industry trends and patterns',
+      logo: (
+        <svg className="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+        </svg>
+      ),
+      duration: 400
+    },
+    {
+      id: 'synthesis',
+      title: 'Data Synthesis',
+      description: 'Generating comprehensive business insights',
+      logo: (
+        <svg className="w-6 h-6 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+        </svg>
+      ),
+      duration: 300
+    }
+  ];
 
   const handleAnalyze = async () => {
     if (!businessIdea.trim()) return;
     
     setAnalyzing(true);
     setProgress(0);
-    setActiveTab('analysis');
+    setCurrentStage(0);
+    setCompletedStages([]);
     
-    const progressInterval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 90) {
-          clearInterval(progressInterval);
-          return 90;
+    let currentTime = 0;
+    
+    for (let i = 0; i < analysisStages.length; i++) {
+      const stage = analysisStages[i];
+      
+      setTimeout(() => {
+        setCurrentStage(i);
+        setProgress((i / analysisStages.length) * 100);
+      }, currentTime);
+      
+      setTimeout(() => {
+        setCompletedStages(prev => [...prev, stage.id]);
+        if (i === analysisStages.length - 1) {
+          setTimeout(() => {
+            setProgress(100);
+            setResults({
+              parsing: {
+                industry: 'E-commerce',
+                targetAudience: 'Gen Z (18-24)',
+                businessModel: 'B2C Marketplace',
+                confidence: 94
+              },
+              market: {
+                growthRate: 12.4,
+                marketSize: '$4.2B',
+                competition: 'Medium',
+                trends: ['Mobile-first shopping', 'Social commerce', 'Sustainability focus']
+              },
+              audience: {
+                demographics: 'Urban millennials and Gen Z, 18-34 years old',
+                behaviors: ['Social media driven purchases', 'Values authenticity', 'Price conscious'],
+                segments: ['Early adopters', 'Social influencers', 'Budget-conscious shoppers']
+              },
+              risks: {
+                level: 'Medium',
+                factors: ['Market saturation', 'High customer acquisition costs', 'Platform dependency'],
+                mitigations: ['Unique value proposition', 'Organic growth strategies', 'Multi-channel approach']
+              }
+            });
+            setAnalyzing(false);
+          }, 2000);
         }
-        return prev + 10;
-      });
-    }, 300);
-
-    setTimeout(() => {
-      setProgress(100);
-      setResults({
-        parsing: {
-          industry: 'E-commerce',
-          targetAudience: 'Gen Z (18-24)',
-          businessModel: 'B2C Marketplace',
-          confidence: 94
-        },
-        market: {
-          growthRate: 12.4,
-          marketSize: '$4.2B',
-          competition: 'Medium',
-          trends: ['Mobile-first shopping', 'Social commerce', 'Sustainability focus']
-        },
-        audience: {
-          demographics: 'Urban millennials and Gen Z, 18-34 years old',
-          behaviors: ['Social media driven purchases', 'Values authenticity', 'Price conscious'],
-          segments: ['Early adopters', 'Social influencers', 'Budget-conscious shoppers']
-        },
-        risks: {
-          level: 'Medium',
-          factors: ['Market saturation', 'High customer acquisition costs', 'Platform dependency'],
-          mitigations: ['Unique value proposition', 'Organic growth strategies', 'Multi-channel approach']
-        }
-      });
-      setAnalyzing(false);
-      setActiveTab('results');
-      clearInterval(progressInterval);
-    }, 3000);
+      }, currentTime + stage.duration);
+      
+      currentTime += stage.duration;
+    }
   };
 
   const generateReport = () => {
     alert('Generating comprehensive PDF report...');
   };
 
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900"></div>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(56,189,248,0.03),transparent_50%)]"></div>
-      
-      <header className="relative border-b border-slate-800/50 bg-slate-950/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            <div className="flex items-center space-x-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-cyan-500/20">
-                <div className="w-6 h-6 border-2 border-white rounded transform rotate-45"></div>
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight text-slate-100">Business Intelligence Platform</h1>
-                <p className="text-xs text-slate-400 uppercase tracking-wider">AI-Powered Analysis Engine</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-6">
-              <div className="px-3 py-1 bg-slate-800/50 border border-slate-700/50 rounded-full">
-                <span className="text-xs text-slate-300 uppercase tracking-wider">Google Cloud ADK</span>
-              </div>
-            </div>
-          </div>
+  if (analyzing || results) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-purple-900/20 to-pink-900/20"></div>
+        <div className="absolute inset-0">
+          <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
         </div>
-      </header>
-
-      <main className="relative max-w-7xl mx-auto px-6 lg:px-8 py-12">
-        <div className="mb-12">
-          <nav className="flex space-x-2 bg-slate-900/50 p-2 rounded-xl border border-slate-800/50 backdrop-blur-sm">
-            {[
-              { id: 'input', label: 'Input Analysis', sublabel: 'Business Idea Processing' },
-              { id: 'analysis', label: 'Processing', sublabel: 'Agent Execution' },
-              { id: 'results', label: 'Intelligence', sublabel: 'Strategic Insights' }
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 px-6 py-4 rounded-lg font-medium transition-all duration-200 ${
-                  activeTab === tab.id
-                    ? 'bg-slate-800 text-slate-100 border border-slate-700/50 shadow-lg'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/30'
-                }`}
-              >
-                <div className="text-left">
-                  <div className="text-sm font-semibold">{tab.label}</div>
-                  <div className="text-xs text-slate-500 mt-1">{tab.sublabel}</div>
-                </div>
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        {activeTab === 'input' && (
-          <div className="max-w-5xl mx-auto space-y-12">
-            <div className="text-center space-y-6">
-              <h2 className="text-4xl font-bold text-slate-100 tracking-tight">
-                Enterprise Business Validation
-              </h2>
-              <p className="text-xl text-slate-400 max-w-3xl mx-auto leading-relaxed">
-                Advanced AI-driven market intelligence and strategic analysis for data-driven business decisions
-              </p>
-            </div>
-
-            <div className="bg-slate-900/50 border border-slate-800/50 rounded-2xl p-8 backdrop-blur-sm">
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-3 uppercase tracking-wider">
-                    Business Concept Description
-                  </label>
-                  <textarea
-                    value={businessIdea}
-                    onChange={(e) => setBusinessIdea(e.target.value)}
-                    placeholder="Provide a comprehensive description of your business concept, including target market, value proposition, business model, and competitive advantages..."
-                    className="w-full h-40 px-6 py-4 bg-slate-800/50 border border-slate-700/50 rounded-xl text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 resize-none transition-all backdrop-blur-sm"
-                    rows={8}
-                  />
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <button
-                    onClick={handleAnalyze}
-                    disabled={!businessIdea.trim() || analyzing}
-                    className="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 text-white py-4 px-8 rounded-xl font-semibold hover:from-cyan-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg shadow-cyan-500/20 uppercase tracking-wider text-sm"
-                  >
-                    {analyzing ? 'Executing Analysis...' : 'Initialize Analysis Protocol'}
-                  </button>
-                  <button className="px-8 py-4 border border-slate-700/50 rounded-xl text-slate-300 hover:bg-slate-800/50 transition-all duration-200 uppercase tracking-wider text-sm">
-                    Load Template
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid lg:grid-cols-3 gap-8">
-              <div className="bg-slate-900/30 border border-slate-800/30 p-8 rounded-2xl backdrop-blur-sm">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg mb-6 flex items-center justify-center">
-                  <div className="w-6 h-6 border-2 border-white rounded-sm"></div>
-                </div>
-                <h3 className="font-bold text-slate-100 mb-3 text-lg">Market Intelligence</h3>
-                <p className="text-slate-400 text-sm leading-relaxed">Advanced market analysis with competitive landscape mapping and growth trajectory modeling</p>
-              </div>
-              <div className="bg-slate-900/30 border border-slate-800/30 p-8 rounded-2xl backdrop-blur-sm">
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg mb-6 flex items-center justify-center">
-                  <div className="w-6 h-6 border-2 border-white rounded-full"></div>
-                </div>
-                <h3 className="font-bold text-slate-100 mb-3 text-lg">Audience Analytics</h3>
-                <p className="text-slate-400 text-sm leading-relaxed">Precision customer segmentation with behavioral profiling and demographic intelligence</p>
-              </div>
-              <div className="bg-slate-900/30 border border-slate-800/30 p-8 rounded-2xl backdrop-blur-sm">
-                <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-500 rounded-lg mb-6 flex items-center justify-center">
-                  <div className="w-6 h-6 border-2 border-white rounded transform rotate-45"></div>
-                </div>
-                <h3 className="font-bold text-slate-100 mb-3 text-lg">Risk Assessment</h3>
-                <p className="text-slate-400 text-sm leading-relaxed">Comprehensive risk evaluation with mitigation strategies and contingency planning</p>
-              </div>
-            </div>
+        
+        <div className="relative z-10 max-w-6xl mx-auto px-6 py-8">
+          <div className="flex items-center justify-between mb-8">
+            <h1 className="text-2xl font-light text-white/90">Business Intelligence</h1>
+            <button 
+              onClick={() => {
+                setAnalyzing(false);
+                setResults(null);
+                setProgress(0);
+                setBusinessIdea('');
+              }}
+              className="px-6 py-3 text-sm text-white/80 hover:text-white bg-white/10 hover:bg-white/20 backdrop-blur-xl border border-white/20 rounded-xl transition-all duration-300 hover:scale-105"
+            >
+              New Search
+            </button>
           </div>
-        )}
 
-        {activeTab === 'analysis' && (
-          <div className="max-w-5xl mx-auto">
-            <div className="bg-slate-900/50 border border-slate-800/50 rounded-2xl p-12 backdrop-blur-sm">
-              <div className="text-center space-y-8 mb-12">
-                <h2 className="text-3xl font-bold text-slate-100">
-                  Analysis Protocol Executing
-                </h2>
-                <p className="text-slate-400 text-lg">
-                  Multi-agent AI system processing strategic intelligence
-                </p>
-              </div>
-
-              <div className="space-y-8">
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm text-slate-400 uppercase tracking-wider">
-                    <span>System Progress</span>
-                    <span>{progress}% Complete</span>
+          {analyzing && (
+            <div className="space-y-8">
+              <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-2xl">
+                <div className="mb-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-2xl font-light text-white">Analyzing Your Business Idea</h3>
+                    <div className="text-sm text-white/70 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm">
+                      {Math.round(progress)}% Complete
+                    </div>
                   </div>
-                  <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden">
+                  <div className="w-full bg-white/10 rounded-full h-3 mb-8 backdrop-blur-sm">
                     <div 
-                      className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-300 ease-out rounded-full"
+                      className="bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 h-3 rounded-full transition-all duration-700 ease-out shadow-lg"
                       style={{ width: `${progress}%` }}
                     ></div>
                   </div>
                 </div>
 
-                <div className="grid lg:grid-cols-2 gap-6">
-                  {[
-                    { agent: 'Parsing Protocol', status: progress > 20 ? 'complete' : 'active', task: 'Structuring business intelligence data' },
-                    { agent: 'Market Analysis Engine', status: progress > 40 ? 'complete' : progress > 20 ? 'active' : 'standby', task: 'Processing market dynamics and competitive analysis' },
-                    { agent: 'Audience Intelligence', status: progress > 60 ? 'complete' : progress > 40 ? 'active' : 'standby', task: 'Generating customer behavioral profiles' },
-                    { agent: 'Risk Evaluation System', status: progress > 80 ? 'complete' : progress > 60 ? 'active' : 'standby', task: 'Calculating risk factors and mitigation protocols' }
-                  ].map((agent, index) => (
-                    <div key={index} className="flex items-center space-x-6 p-6 rounded-xl border border-slate-800/30 bg-slate-800/20">
-                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                        agent.status === 'complete' ? 'border-green-500 bg-green-500' :
-                        agent.status === 'active' ? 'border-cyan-500 bg-cyan-500 animate-pulse' : 'border-slate-600'
-                      }`}>
-                        {agent.status === 'complete' && <div className="w-2 h-2 bg-white rounded-full"></div>}
+                <div className="space-y-4">
+                  {analysisStages.map((stage, index) => {
+                    const isActive = index === currentStage;
+                    const isCompleted = completedStages.includes(stage.id);
+                    const isPending = index > currentStage;
+
+                    return (
+                      <div
+                        key={stage.id}
+                        className={`flex items-center space-x-6 p-6 rounded-2xl transition-all duration-500 backdrop-blur-sm ${
+                          isActive 
+                            ? 'bg-blue-500/20 border border-blue-400/30 shadow-xl scale-105' 
+                            : isCompleted 
+                            ? 'bg-emerald-500/20 border border-emerald-400/30' 
+                            : 'bg-white/5 border border-white/10'
+                        }`}
+                      >
+                        <div className={`flex items-center justify-center w-14 h-14 rounded-2xl transition-all duration-300 ${
+                          isActive 
+                            ? 'bg-blue-500/30 shadow-lg animate-pulse backdrop-blur-sm' 
+                            : isCompleted 
+                            ? 'bg-emerald-500/30 backdrop-blur-sm' 
+                            : 'bg-white/10 backdrop-blur-sm'
+                        }`}>
+                          {isCompleted ? (
+                            <svg className="w-7 h-7 text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          ) : (
+                            stage.logo
+                          )}
+                        </div>
+                        
+                        <div className="flex-1">
+                          <div className={`font-medium text-lg transition-colors ${
+                            isActive ? 'text-blue-200' : isCompleted ? 'text-emerald-200' : 'text-white/80'
+                          }`}>
+                            {stage.title}
+                          </div>
+                          <div className={`text-sm transition-colors ${
+                            isActive ? 'text-blue-300/80' : isCompleted ? 'text-emerald-300/80' : 'text-white/60'
+                          }`}>
+                            {stage.description}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center">
+                          {isActive && (
+                            <div className="flex space-x-2">
+                              <div className="w-3 h-3 bg-blue-400 rounded-full animate-bounce"></div>
+                              <div className="w-3 h-3 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                              <div className="w-3 h-3 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                            </div>
+                          )}
+                          {isCompleted && (
+                            <div className="w-8 h-8 bg-emerald-500/30 backdrop-blur-sm rounded-xl flex items-center justify-center border border-emerald-400/30">
+                              <svg className="w-5 h-5 text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            </div>
+                          )}
+                          {isPending && (
+                            <div className="w-8 h-8 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/20">
+                              <div className="w-3 h-3 bg-white/40 rounded-full"></div>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <p className="font-semibold text-slate-200 text-sm uppercase tracking-wider">{agent.agent}</p>
-                        <p className="text-xs text-slate-400 mt-1">{agent.task}</p>
+                    );
+                  })}
+                </div>
+
+                {currentStage === analysisStages.length - 1 && progress < 100 && (
+                  <div className="mt-8 p-6 bg-gradient-to-r from-purple-500/20 to-pink-500/20 backdrop-blur-xl border border-purple-400/30 rounded-2xl">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-10 h-10 border-3 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
+                      <div>
+                        <div className="font-medium text-purple-200 text-lg">Finalizing Analysis</div>
+                        <div className="text-sm text-purple-300/80">Generating comprehensive business insights...</div>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
               </div>
+            </div>
+          )}
+
+          {results && (
+            <div className="space-y-8">
+              <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-2xl">
+                <h2 className="text-2xl font-light text-white mb-8">Business Analysis Results</h2>
+                
+                <div className="grid lg:grid-cols-2 gap-8">
+                  <div className="space-y-6">
+                    <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
+                      <h3 className="font-medium text-white text-lg mb-4 flex items-center">
+                        <div className="w-2 h-2 bg-blue-400 rounded-full mr-3"></div>
+                        Business Intelligence
+                      </h3>
+                      <div className="space-y-3 text-sm">
+                        <div className="flex justify-between items-center">
+                          <span className="text-white/70">Industry:</span>
+                          <span className="text-white font-medium">{results.parsing.industry}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-white/70">Target Audience:</span>
+                          <span className="text-white font-medium">{results.parsing.targetAudience}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-white/70">Business Model:</span>
+                          <span className="text-white font-medium">{results.parsing.businessModel}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-white/70">Confidence:</span>
+                          <span className="text-emerald-400 font-semibold">{results.parsing.confidence}%</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
+                      <h3 className="font-medium text-white text-lg mb-4 flex items-center">
+                        <div className="w-2 h-2 bg-emerald-400 rounded-full mr-3"></div>
+                        Market Analytics
+                      </h3>
+                      <div className="space-y-3 text-sm">
+                        <div className="flex justify-between items-center">
+                          <span className="text-white/70">Growth Rate:</span>
+                          <span className="text-blue-400 font-semibold">+{results.market.growthRate}%</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-white/70">Market Size:</span>
+                          <span className="text-white font-medium">{results.market.marketSize}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-white/70">Competition:</span>
+                          <span className="text-white font-medium">{results.market.competition}</span>
+                        </div>
+                      </div>
+                      <div className="mt-4">
+                        <span className="text-white/70 text-sm">Trends:</span>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {results.market.trends.map((trend, index) => (
+                            <span key={index} className="px-3 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full backdrop-blur-sm border border-blue-400/30">
+                              {trend}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
+                      <h3 className="font-medium text-white text-lg mb-4 flex items-center">
+                        <div className="w-2 h-2 bg-purple-400 rounded-full mr-3"></div>
+                        Audience Intelligence
+                      </h3>
+                      <div className="text-sm text-white/80 mb-4">{results.audience.demographics}</div>
+                      <div className="space-y-2">
+                        {results.audience.behaviors.map((behavior, index) => (
+                          <div key={index} className="text-sm text-white/70 flex items-center">
+                            <span className="w-1.5 h-1.5 bg-purple-400 rounded-full mr-3"></span>
+                            {behavior}
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-4">
+                        <span className="text-white/70 text-sm">Segments:</span>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {results.audience.segments.map((segment, index) => (
+                            <span key={index} className="px-3 py-1 bg-purple-500/20 text-purple-300 text-xs rounded-full backdrop-blur-sm border border-purple-400/30">
+                              {segment}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
+                      <h3 className="font-medium text-white text-lg mb-4 flex items-center">
+                        <div className="w-2 h-2 bg-orange-400 rounded-full mr-3"></div>
+                        Risk Assessment
+                      </h3>
+                      <div className="text-sm mb-4">
+                        <span className="text-white/70">Risk Level: </span>
+                        <span className="text-orange-400 font-semibold">{results.risks.level}</span>
+                      </div>
+                      <div className="space-y-3">
+                        <div>
+                          <span className="text-white/70 text-sm">Risk Factors:</span>
+                          <div className="space-y-2 mt-2">
+                            {results.risks.factors.map((factor, index) => (
+                              <div key={index} className="text-sm text-white/70 flex items-center">
+                                <span className="w-1.5 h-1.5 bg-red-400 rounded-full mr-3"></span>
+                                {factor}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <span className="text-white/70 text-sm">Mitigations:</span>
+                          <div className="space-y-2 mt-2">
+                            {results.risks.mitigations.map((mitigation, index) => (
+                              <div key={index} className="text-sm text-white/70 flex items-center">
+                                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-3"></span>
+                                {mitigation}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={generateReport}
+                  className="mt-8 w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white py-4 px-8 rounded-2xl font-medium transition-all duration-300 hover:scale-105 hover:shadow-2xl backdrop-blur-sm"
+                >
+                  Generate Full Report
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative flex flex-col overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-purple-900/20 to-pink-900/20"></div>
+      <div className="absolute inset-0">
+        <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
+      </div>
+      
+      <header className="relative z-10 backdrop-blur-xl bg-white/10 border-b border-white/20">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-light text-white">Business Intelligence</h1>
+            <div className="flex items-center space-x-4">
+              <span className="text-sm text-white/60 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm">Powered by Google Cloud ADK</span>
             </div>
           </div>
-        )}
+        </div>
+      </header>
 
-        {activeTab === 'results' && results && (
-          <div className="space-y-12">
-            <div className="text-center space-y-6">
-              <h2 className="text-4xl font-bold text-slate-100">
-                Strategic Intelligence Report
-              </h2>
-              <p className="text-slate-400 text-lg mb-8">
-                Comprehensive business analysis with actionable insights
-              </p>
-              <button
-                onClick={generateReport}
-                className="bg-gradient-to-r from-emerald-600 to-cyan-600 text-white px-8 py-4 rounded-xl font-semibold hover:from-emerald-700 hover:to-cyan-700 transition-all duration-200 shadow-lg shadow-emerald-500/20 uppercase tracking-wider text-sm"
-              >
-                Export Intelligence Report
-              </button>
-            </div>
-
-            <div className="grid lg:grid-cols-2 gap-8">
-              <div className="bg-slate-900/50 border border-slate-800/50 rounded-2xl p-8 backdrop-blur-sm">
-                <h3 className="text-2xl font-bold text-slate-100 mb-6 flex items-center">
-                  <div className="w-2 h-8 bg-gradient-to-b from-cyan-500 to-blue-500 rounded-full mr-4"></div>
-                  Business Intelligence
-                </h3>
-                <div className="space-y-4">
-                  {[
-                    { label: 'Industry Classification', value: results.parsing.industry, color: 'text-slate-300' },
-                    { label: 'Target Market', value: results.parsing.targetAudience, color: 'text-slate-300' },
-                    { label: 'Business Architecture', value: results.parsing.businessModel, color: 'text-slate-300' },
-                    { label: 'Confidence Index', value: `${results.parsing.confidence}%`, color: 'text-emerald-400' }
-                  ].map((item, index) => (
-                    <div key={index} className="flex justify-between items-center p-4 bg-slate-800/30 rounded-lg border border-slate-700/30">
-                      <span className="text-slate-400 text-sm uppercase tracking-wider">{item.label}</span>
-                      <span className={`font-semibold ${item.color}`}>{item.value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-slate-900/50 border border-slate-800/50 rounded-2xl p-8 backdrop-blur-sm">
-                <h3 className="text-2xl font-bold text-slate-100 mb-6 flex items-center">
-                  <div className="w-2 h-8 bg-gradient-to-b from-blue-500 to-purple-500 rounded-full mr-4"></div>
-                  Market Analytics
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center p-4 bg-blue-900/20 rounded-lg border border-blue-800/30">
-                    <span className="text-slate-400 text-sm uppercase tracking-wider">Growth Projection</span>
-                    <span className="font-semibold text-blue-400">+{results.market.growthRate}%</span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 bg-slate-800/30 rounded-lg border border-slate-700/30">
-                    <span className="text-slate-400 text-sm uppercase tracking-wider">Market Valuation</span>
-                    <span className="font-semibold text-slate-300">{results.market.marketSize}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 bg-slate-800/30 rounded-lg border border-slate-700/30">
-                    <span className="text-slate-400 text-sm uppercase tracking-wider">Competition Density</span>
-                    <span className="font-semibold text-slate-300">{results.market.competition}</span>
-                  </div>
-                  <div className="p-4 bg-slate-800/30 rounded-lg border border-slate-700/30">
-                    <p className="text-slate-400 text-sm uppercase tracking-wider mb-3">Market Trends</p>
-                    <div className="flex flex-wrap gap-2">
-                      {results.market.trends.map((trend, index) => (
-                        <span key={index} className="px-3 py-1 bg-blue-900/30 border border-blue-800/30 text-blue-300 text-xs rounded-lg uppercase tracking-wider">
-                          {trend}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-slate-900/50 border border-slate-800/50 rounded-2xl p-8 backdrop-blur-sm">
-                <h3 className="text-2xl font-bold text-slate-100 mb-6 flex items-center">
-                  <div className="w-2 h-8 bg-gradient-to-b from-purple-500 to-pink-500 rounded-full mr-4"></div>
-                  Audience Intelligence
-                </h3>
-                <div className="space-y-4">
-                  <div className="p-4 bg-slate-800/30 rounded-lg border border-slate-700/30">
-                    <p className="text-slate-400 text-sm uppercase tracking-wider mb-3">Demographics</p>
-                    <p className="text-slate-300 text-sm">{results.audience.demographics}</p>
-                  </div>
-                  <div className="p-4 bg-slate-800/30 rounded-lg border border-slate-700/30">
-                    <p className="text-slate-400 text-sm uppercase tracking-wider mb-3">Behavioral Patterns</p>
-                    <div className="space-y-2">
-                      {results.audience.behaviors.map((behavior, index) => (
-                        <p key={index} className="text-slate-300 text-sm flex items-center">
-                          <span className="w-1 h-1 bg-slate-500 rounded-full mr-3"></span>
-                          {behavior}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="p-4 bg-slate-800/30 rounded-lg border border-slate-700/30">
-                    <p className="text-slate-400 text-sm uppercase tracking-wider mb-3">Market Segments</p>
-                    <div className="flex flex-wrap gap-2">
-                      {results.audience.segments.map((segment, index) => (
-                        <span key={index} className="px-3 py-1 bg-purple-900/30 border border-purple-800/30 text-purple-300 text-xs rounded-lg uppercase tracking-wider">
-                          {segment}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-slate-900/50 border border-slate-800/50 rounded-2xl p-8 backdrop-blur-sm">
-                <h3 className="text-2xl font-bold text-slate-100 mb-6 flex items-center">
-                  <div className="w-2 h-8 bg-gradient-to-b from-amber-500 to-red-500 rounded-full mr-4"></div>
-                  Risk Assessment
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center p-4 bg-amber-900/20 rounded-lg border border-amber-800/30">
-                    <span className="text-slate-400 text-sm uppercase tracking-wider">Risk Classification</span>
-                    <span className="font-semibold text-amber-400">{results.risks.level}</span>
-                  </div>
-                  <div className="p-4 bg-slate-800/30 rounded-lg border border-slate-700/30">
-                    <p className="text-slate-400 text-sm uppercase tracking-wider mb-3">Risk Factors</p>
-                    <div className="space-y-2">
-                      {results.risks.factors.map((factor, index) => (
-                        <p key={index} className="text-slate-300 text-sm flex items-center">
-                          <span className="w-1 h-1 bg-red-500 rounded-full mr-3"></span>
-                          {factor}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="p-4 bg-emerald-900/20 rounded-lg border border-emerald-800/30">
-                    <p className="text-slate-400 text-sm uppercase tracking-wider mb-3">Mitigation Protocols</p>
-                    <div className="space-y-2">
-                      {results.risks.mitigations.map((mitigation, index) => (
-                        <p key={index} className="text-emerald-300 text-sm flex items-center">
-                          <span className="w-1 h-1 bg-emerald-500 rounded-full mr-3"></span>
-                          {mitigation}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </main>
-
-      <footer className="relative border-t border-slate-800/50 bg-slate-950/80 backdrop-blur-xl mt-20">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12">
-          <div className="text-center text-slate-400">
-            <p className="text-sm uppercase tracking-wider">
-              Enterprise Business Intelligence Platform • Google Cloud ADK • Advanced AI Architecture
+      <main className="relative z-10 flex-1 flex items-center justify-center px-6">
+        <div className="w-full max-w-4xl">
+          <div className="text-center mb-12">
+            <h2 className="text-5xl font-extralight text-white mb-6 tracking-wide">
+              Analyze your business idea
+            </h2>
+            <p className="text-xl text-white/70 max-w-2xl mx-auto">
+              Get comprehensive market analysis, audience insights, and risk assessment powered by advanced AI
             </p>
           </div>
+
+          <div className="space-y-6">
+            <div className="relative">
+              <textarea
+                value={businessIdea}
+                onChange={(e) => setBusinessIdea(e.target.value)}
+                placeholder="Describe your business idea in detail..."
+                className="w-full min-h-[140px] p-6 bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-400/50 resize-none text-white placeholder-white/50 text-lg transition-all duration-300"
+                rows={5}
+              />
+              <div className="absolute top-4 right-4 text-white/40">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </div>
+            </div>
+            
+            <button
+              onClick={handleAnalyze}
+              disabled={!businessIdea.trim()}
+              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:from-gray-500 disabled:to-gray-600 text-white py-5 px-8 rounded-3xl font-medium text-lg transition-all duration-300 hover:scale-105 hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 backdrop-blur-sm"
+            >
+              Analyze Business Idea
+            </button>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 mt-16">
+            <div className="text-center group">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500/20 to-blue-600/20 backdrop-blur-xl rounded-2xl flex items-center justify-center mx-auto mb-6 border border-blue-400/30 group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <h3 className="font-medium text-white text-lg mb-3">Market Analysis</h3>
+              <p className="text-white/70">Comprehensive market research and competitive landscape analysis</p>
+            </div>
+            <div className="text-center group">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-500/20 to-purple-600/20 backdrop-blur-xl rounded-2xl flex items-center justify-center mx-auto mb-6 border border-purple-400/30 group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+              <h3 className="font-medium text-white text-lg mb-3">Audience Insights</h3>
+              <p className="text-white/70">Target audience analysis with demographic and behavioral data</p>
+            </div>
+            <div className="text-center group">
+              <div className="w-16 h-16 bg-gradient-to-br from-orange-500/20 to-orange-600/20 backdrop-blur-xl rounded-2xl flex items-center justify-center mx-auto mb-6 border border-orange-400/30 group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-8 h-8 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.965-.833-2.732 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <h3 className="font-medium text-white text-lg mb-3">Risk Assessment</h3>
+              <p className="text-white/70">Identify potential risks and strategic mitigation approaches</p>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <footer className="relative z-10 backdrop-blur-xl bg-white/5 border-t border-white/10 py-8">
+        <div className="max-w-7xl mx-auto px-6 text-center text-white/60">
+          Business Intelligence Platform powered by Google Cloud Agent Development Kit
         </div>
       </footer>
     </div>
