@@ -49,21 +49,9 @@ class RedditAgent():
 
     async def initialize_agents(self):
         self.posts = await self.get_relevant_posts_from_subreddits_by_keywords(self.keywords)
-
-        self.session_service = InMemorySessionService()
-        self.session = await self.session_service.create_session(
-            session_id=SESSION_ID,
-            user_id=USER_ID,
-            app_name="RedditAgent",
-        )
-
-        print(self.session)
-
         logger.info(f"Found {len(self.posts)} total posts from all subreddits")
 
-        # Summarizer agent - SUB AGENT
-        logger.info("Creating summarizer agent instructions")
-        self.summarizer_instructions = f"""
+        summarizer_instructions = f"""
         You are a helpful assistant that summarizes posts from a given subreddit without losing
         relevant information and key points.
         
@@ -73,7 +61,7 @@ class RedditAgent():
         Here are the posts to summarize:
         {json.dumps(self.posts, indent=4)}
         """
-        logger.info("Initializing summarizer agent")
+        
         self.summarizer_agent = LlmAgent(
             name="Summarizer",
             description="Summarize the posts",
@@ -82,16 +70,14 @@ class RedditAgent():
             generate_content_config=types.GenerateContentConfig(
                 temperature=0.3,
             ),
-            instruction=self.summarizer_instructions,
+            instruction=summarizer_instructions,
             output_schema=self.SummaryOutput,
             output_key="summary",
             disallow_transfer_to_parent=True,
             disallow_transfer_to_peers=True
         )
 
-        # Pros and cons agent - SUB AGENT
-        logger.info("Creating pros/cons agent instructions")
-        self.pros_cons_instructions = f"""
+        pros_cons_instructions = f"""
         You have a sharp eye for business opportunities and trends, you are able to identify the most relevant posts and classify them
         into pros and cons depending on the given business idea keywords.
         You are also able to identify non-relevant posts and filter them out, as well as sterile business opportunities and trends.
@@ -104,7 +90,7 @@ class RedditAgent():
         Here are the posts to analyze:
         {json.dumps(self.posts, indent=4)}
         """
-        logger.info("Initializing pros/cons agent")
+        
         self.pros_cons_agent = LlmAgent(
             name="ProsCons",
             description="Analyze the posts and identify the pros and cons",
@@ -113,27 +99,29 @@ class RedditAgent():
             generate_content_config=types.GenerateContentConfig(
                 temperature=0.3,
             ),
-            instruction=self.pros_cons_instructions,
+            instruction=pros_cons_instructions,
             output_schema=self.ProsConsOutput,
             output_key="pros_cons",
             disallow_transfer_to_parent=True,
             disallow_transfer_to_peers=True
         )
-        logger.info("RedditAgent initialization completed")
 
-        # Parallel agent - MAIN AGENT
-        logger.info("Creating parallel agent")
         self.parallel_agent = ParallelAgent(
             name="Parallel",
             description="Run the summarizer and pros/cons agents in parallel",
             sub_agents=[self.summarizer_agent, self.pros_cons_agent],
         )
 
-        # Runner agent - MANAGER AGENT
-        logger.info("Creating runner agent instructions")
+        self.session_service = InMemorySessionService()
+        self.session = await self.session_service.create_session(
+            session_id="reddit_session",
+            user_id="reddit_user",
+            app_name="RedditAgent"
+        )
+
         self.runner_agent = Runner(
             agent=self.parallel_agent,
-            app_name="RedditRunnerAgent",
+            app_name="RedditAgent",
             session_service=self.session_service
         )
 
@@ -149,20 +137,29 @@ class RedditAgent():
         return posts
 
     async def call_agent_async(self):
-        await self.initialize_agents() # Until this function is called, the agents are not initialized
+        final_response = None
         async for event in self.runner_agent.run_async(
-            user_id=self.session.user_id,
-            session_id=SESSION_ID,
+            session_id="reddit_session",
+            user_id="reddit_user",
             new_message=types.Content(parts=[types.Part(text="Analyze reddit for business idea.")])
         ):
             print(f"  [Event] Author: {event.author}, Type: {type(event).__name__}, Final: {event.is_final_response()}, Content: {event.content}")
+            yield event
             if event.is_final_response():
                 if event.content and event.content.parts[0].text:
                     final_response = event.content.parts[0].text
                 elif event.actions and event.actions.escalate:
                     final_response = "I'm sorry, I'm not able to analyze the posts. Please try again."
                 break
-        print(final_response)
+        
+        if final_response:
+            print(final_response)
+        else:
+            print("No final response received")
+
+    async def run(self):
+        await self.initialize_agents()
+        await self.call_agent_async()
 
 if __name__ == "__main__":
 
@@ -171,7 +168,7 @@ if __name__ == "__main__":
         reddit_agent = RedditAgent(keywords=["real estate", "asset management"])
         logger.info("Reddit Agent created, starting analysis")
 
-        await reddit_agent.call_agent_async()
+        await reddit_agent.run()
 
         logger.info("Analysis completed, processing results")
   

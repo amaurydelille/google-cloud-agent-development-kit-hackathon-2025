@@ -5,7 +5,7 @@ import json
 import logging
 from google.adk.agents import BaseAgent, LlmAgent, SequentialAgent
 from google.adk.runners import Runner
-from google_utils import search_google, fetch_website_content
+from .google_utils import search_google, fetch_website_content
 from google.genai import types
 from pydantic import BaseModel, Field
 from google.adk.sessions import InMemorySessionService
@@ -44,6 +44,18 @@ class GoogleAgent():
         Here are the search results: {json.dumps(self.search_results, indent=2)}
 
         Return only the URLs of the most relevant results, one per line, then hand off to the next agent to fetch and analyze the content.
+        Here is the format of the output:
+
+        {{
+            "urls": [
+                "url1",
+                "url2",
+                "url3",
+                ...
+            ]
+        }}
+
+        DO NOT include any other text in your response.
         """
 
         self.search_agent = LlmAgent(
@@ -111,6 +123,7 @@ class GoogleAgent():
             new_message=types.Content(parts=[types.Part(text=self.query)])
         ):
             print(f"  [Event] Author: {event.author}, Type: {type(event).__name__}, Final: {event.is_final_response()}, Content: {event.content}")
+            yield event
             if event.is_final_response():
                 if event.content and event.content.parts[0].text:
                     final_response = event.content.parts[0].text

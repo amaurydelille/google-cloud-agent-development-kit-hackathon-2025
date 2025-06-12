@@ -84,26 +84,37 @@ async def search_posts_by_subreddit_async(subreddit: str, limit: int = 25):
 
 async def search_posts_from_subreddits_parallel(subreddits: list[dict], limit: int = 25):
     start_time = time.time()
-    tasks = [search_posts_by_subreddit_async(subreddit['name'], limit) for subreddit in subreddits]
-    print(f"Created {len(tasks)} parallel tasks for fetching posts")
     
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-    
+    batch_size = 3
     all_posts = []
     success_count = 0
-    for i, result in enumerate(results):
-        if isinstance(result, Exception):
-            print(f"Error fetching posts from r/{subreddits[i]['name']}: {result}")
-            continue
-        if isinstance(result, dict) and 'error' in result:
-            print(f"Error in response for r/{subreddits[i]['name']}: {result['error']}")
-            continue
-        all_posts.extend(result)
-        success_count += 1
-        print(f"Successfully fetched {len(result)} posts from r/{subreddits[i]['name']}")
+    
+    for i in range(0, len(subreddits), batch_size):
+        batch = subreddits[i:i + batch_size]
+        tasks = [search_posts_by_subreddit_async(subreddit['name'], limit) for subreddit in batch]
+        print(f"Processing batch {i//batch_size + 1}/{(len(subreddits) + batch_size - 1)//batch_size} with {len(tasks)} subreddits")
+        
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        for j, result in enumerate(results):
+            subreddit_name = batch[j]['name']
+            if isinstance(result, Exception):
+                print(f"Error fetching posts from r/{subreddit_name}: {result}")
+                continue
+            if isinstance(result, dict) and 'error' in result:
+                print(f"Error in response for r/{subreddit_name}: {result['error']}")
+                continue
+            all_posts.extend(result)
+            success_count += 1
+            print(f"Successfully fetched {len(result)} posts from r/{subreddit_name}")
+        
+        if i + batch_size < len(subreddits):
+            delay = 10 + (i // batch_size) * 2
+            print(f"Waiting {delay} seconds before next batch...")
+            await asyncio.sleep(delay)
     
     end_time = time.time()
-    print(f"Parallel execution completed in {end_time - start_time:.2f} seconds")
+    print(f"Batch execution completed in {end_time - start_time:.2f} seconds")
     print(f"Successfully fetched from {success_count}/{len(subreddits)} subreddits")
     
     return all_posts

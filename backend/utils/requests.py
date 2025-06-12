@@ -43,9 +43,9 @@ class SafeRequest:
             
             if SafeRequest._last_request_time > 0:
                 time_since_last = current_time - SafeRequest._last_request_time
-                min_delay = 2.0
+                min_delay = 5.0
                 if time_since_last < min_delay:
-                    sleep_time = min_delay - time_since_last + random.uniform(0, 1)
+                    sleep_time = min_delay - time_since_last + random.uniform(1, 3)
                     if verbose:
                         print(f"Rate limiting: waiting {sleep_time:.2f} seconds between requests")
                     time.sleep(sleep_time)
@@ -55,8 +55,8 @@ class SafeRequest:
                 SafeRequest._start_time_reddit = current_time
             
             SafeRequest._count_reddit += 1
-            if SafeRequest._count_reddit >= 30:
-                wait_time = 60 - (current_time - SafeRequest._start_time_reddit) + random.uniform(5, 15)
+            if SafeRequest._count_reddit >= 10:
+                wait_time = 60 - (current_time - SafeRequest._start_time_reddit) + random.uniform(10, 20)
                 if wait_time > 0:
                     if verbose:
                         print(f"Conservative rate limit reached, waiting {wait_time:.2f} seconds...")
