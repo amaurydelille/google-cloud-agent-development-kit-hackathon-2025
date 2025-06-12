@@ -55,6 +55,7 @@ class GoogleAgent():
             ]
         }}
 
+        DO NOT include "```json" or "```" in your response.
         DO NOT include any other text in your response.
         """
 
