@@ -23,8 +23,7 @@ async def event_generator(google_agent):
         logger.info("Starting event generator")
         await google_agent.initialize_agents()
         async for event in google_agent.call_agent_async():
-            logger.info(event)
-            logger.info("Event received")
+            logger.info(f"Event received: {event.author}")
             if event.content and event.content.parts:
                 data = {
                     "author": event.author,
@@ -32,6 +31,16 @@ async def event_generator(google_agent):
                     "is_final": event.is_final_response()
                 }
                 yield f"data: {json.dumps(data)}\n\n"
+        
+        structured_results = google_agent.get_structured_results()
+        final_data = {
+            "author": "final_results",
+            "content": json.dumps(structured_results),
+            "is_final": True,
+            "structured_data": structured_results
+        }
+        yield f"data: {json.dumps(final_data)}\n\n"
+        
     except Exception as e:
         error_data = {"error": str(e)}
         yield f"data: {json.dumps(error_data)}\n\n"

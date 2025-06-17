@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from google.adk.sessions import InMemorySessionService
 from dotenv import load_dotenv
 from typing import List
+from utils.models import run_sentiment_analysis, run_bigquery_query
 
 load_dotenv()
 
@@ -32,6 +33,9 @@ class GoogleAgent():
         self.query = query
         self.k = k
         self.search_results = search_google(self.query)
+        self.bigquery_metrics = []
+        self.statista_insights = []
+        self.final_summary = ""
 
     async def initialize_agents(self):
         SEARCH_INSTRUCTION = f"""
@@ -80,6 +84,7 @@ class GoogleAgent():
         - Focus on business opportunities and insights
         - Synthesize information from all websites into a cohesive analysis
         - Highlight key findings relevant to the query
+        - Contain no more than 300 words.
 
         Here is the query: {self.query}
         """
@@ -97,10 +102,77 @@ class GoogleAgent():
             disallow_transfer_to_peers=True
         )
 
+        BIGQUERY_INSTRUCTION = f"""
+        You are a data analysis agent that can query BigQuery public datasets to find real-world statistics.
+        Your task is to find any relevant metrics, growth trends, or economic indicators for the following query:
+
+        Query: "{self.query}"
+
+        Use keywords from the query to match BigQuery public datasets (e.g., `google_trends`, `commerce`, `census_bureau`).
+
+        Return a JSON output being a list of objects with the following structure:
+        {{
+            "metric_name": "...",
+            "value": ...,
+            "unit": "...",
+            "source_dataset": "...",
+            "insight_summary": "..."
+        }}
+
+        If nothing useful is found, return an empty array [].
+        DO NOT include "```json" or "```" in your response.
+        """
+
+        self.bigquery_agent = LlmAgent(
+            name="bigquery_agent",
+            description="Queries BigQuery for economic/market metrics",
+            instruction=BIGQUERY_INSTRUCTION,
+            model="gemini-1.5-pro",
+            tools=[run_bigquery_query],
+            generate_content_config=types.GenerateContentConfig(temperature=0.3),
+            disallow_transfer_to_parent=True,
+            disallow_transfer_to_peers=True
+        )
+
+        STATISTA_INSTRUCTION = f"""
+        You are a summarization agent that analyzes any data summaries or scraped content from known economic sources like Statista.
+        You will simulate or synthesize insights about the business domain in this query:
+
+        "{self.query}"
+
+        Summarize likely market size, segmentation, and revenue projections if available.
+        Return a JSON output being a list of objects with the following structure:
+        {{
+            "metric_name": "...",
+            "value": ...,
+            "unit": "...",
+            "source_dataset": "...",
+            "insight_summary": "..."
+        }}
+
+        If nothing useful is found, return an empty array [].
+        DO NOT include "```json" or "```" in your response.
+        """
+
+        self.statista_agent = LlmAgent(
+            name="statista_agent",
+            description="Synthesizes insights similar to Statista market summaries",
+            instruction=STATISTA_INSTRUCTION,
+            model="gemini-2.0-flash",
+            generate_content_config=types.GenerateContentConfig(temperature=0.3),
+            disallow_transfer_to_parent=True,
+            disallow_transfer_to_peers=True
+        )
+
         self.sequential_agent = SequentialAgent(
-            sub_agents=[self.search_agent, self.fetch_website_agent],
+            sub_agents=[
+                self.search_agent,
+                self.fetch_website_agent,
+                self.bigquery_agent,
+                self.statista_agent
+            ],
             name="sequential_agent",
-            description="A agent that can search the web for information and fetch the content of a website",
+            description="Performs a full research + data insight analysis",
         )
 
         self.session_service = InMemorySessionService()
@@ -116,6 +188,17 @@ class GoogleAgent():
             session_service=self.session_service,
         )
 
+    def parse_json_response(self, text: str):
+        try:
+            text = text.strip()
+            if text.startswith("```json"):
+                text = text[7:]
+            if text.endswith("```"):
+                text = text[:-3]
+            return json.loads(text.strip())
+        except:
+            return []
+
     async def call_agent_async(self):
         final_response = None
         async for event in self.runner_agent.run_async(
@@ -123,25 +206,43 @@ class GoogleAgent():
             user_id="google_user",
             new_message=types.Content(parts=[types.Part(text=self.query)])
         ):
-            print(f"  [Event] Author: {event.author}, Type: {type(event).__name__}, Final: {event.is_final_response()}, Content: {event.content}")
             yield event
             if event.is_final_response():
                 if event.content and event.content.parts[0].text:
                     final_response = event.content.parts[0].text
+                    
+                    if event.author == "bigquery_agent":
+                        self.bigquery_metrics = self.parse_json_response(final_response)
+                        print(f"✅ BigQuery metrics collected: {len(self.bigquery_metrics)} items")
+                    elif event.author == "statista_agent":
+                        self.statista_insights = self.parse_json_response(final_response)
+                        print(f"✅ Statista insights collected: {len(self.statista_insights)} items")
+                    elif event.author == "fetch_website_agent":
+                        self.final_summary = final_response
+                        print(f"✅ Website summary collected")
+                    
+                    print(f"✅ {event.author} completed successfully")
                 elif event.actions and event.actions.escalate:
-                    final_response = "I'm sorry, I'm not able to analyze the posts. Please try again."
+                    print(f"❌ {event.author} failed")
                 
-                if event.author == "fetch_website_agent":
+                if event.author == "statista_agent":
                     break
         
-        if final_response:
-            print(final_response)
-        else:
-            print("No final response received")
+        if not final_response:
+            print("❌ No final response received")
+
+    def get_structured_results(self):
+        return {
+            "summary": self.final_summary,
+            "bigquery_metrics": self.bigquery_metrics,
+            "statista_insights": self.statista_insights,
+            "timestamp": asyncio.get_event_loop().time()
+        }
 
     async def run(self):
         await self.initialize_agents()
         await self.call_agent_async()
+        return self.get_structured_results()
 
 if __name__ == "__main__":
     async def main():
