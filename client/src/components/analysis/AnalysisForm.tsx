@@ -30,6 +30,7 @@ export default function AnalysisForm({ onAnalyze }: AnalysisFormProps) {
           <div className="relative">
             <textarea
               value={businessIdea}
+              spellCheck={false}
               onChange={(e) => setBusinessIdea(e.target.value)}
               placeholder="Describe your business idea in detail..."
               className="w-full min-h-[140px] p-6 bg-neutral-900 border border-neutral-700/20 rounded-xl focus:outline-none focus:ring-1 focus:ring-neutral-500/50 focus:border-neutral-500/50 resize-none text-neutral-100 placeholder-neutral-400 text-lg transition-all duration-300"

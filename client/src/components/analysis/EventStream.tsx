@@ -1,16 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Loader from '../ui/Loader';
-
-interface StreamEvent {
-  author: string;
-  content: string;
-  is_final: boolean;
-  timestamp?: Date;
-}
+import { AnalysisEvent } from '../../types/analysis';
 
 interface EventStreamProps {
-  events: StreamEvent[];
+  events: AnalysisEvent[];
   isLoading?: boolean;
 }
 
@@ -52,20 +46,25 @@ export default function EventStream({ events, isLoading = false }: EventStreamPr
   const router = useRouter();
 
   useEffect(() => {
-    const lastGoogleEvent = events
-      .filter(event => event.author === 'fetch_website_agent' && event.is_final)
+    const finalResultsEvent = events
+      .filter(event => event.author === 'final_results' && event.structured_data)
       .pop();
 
-    if (lastGoogleEvent && !isLoading) {
-      const formattedSummary = lastGoogleEvent.content
+    if (finalResultsEvent && finalResultsEvent.structured_data && !isLoading) {
+      const structuredData = finalResultsEvent.structured_data;
+      
+      const formattedSummary = structuredData.summary
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\*(.*?)\*/g, '<em>$1</em>');
       
-      const searchParams = new URLSearchParams({
-        summary: encodeURIComponent(formattedSummary)
-      });
+      sessionStorage.setItem('analysisResult', JSON.stringify({
+        summary: formattedSummary,
+        bigquery_metrics: structuredData.bigquery_metrics,
+        statista_insights: structuredData.statista_insights,
+        timestamp: new Date().toISOString()
+      }));
       
-      router.push(`/dashboard?${searchParams.toString()}`);
+      router.push('/dashboard');
     }
   }, [events, isLoading, router]);
 
@@ -75,6 +74,10 @@ export default function EventStream({ events, isLoading = false }: EventStreamPr
         return '🔍';
       case 'fetch_website_agent':
         return '🌐';
+      case 'bigquery_agent':
+        return '📊';
+      case 'statista_agent':
+        return '📈';
       case 'sequential_agent':
         return '⚡';
       default:
@@ -88,6 +91,10 @@ export default function EventStream({ events, isLoading = false }: EventStreamPr
         return 'Google Search Agent';
       case 'fetch_website_agent':
         return 'Google Analyzer Agent';
+      case 'bigquery_agent':
+        return 'BigQuery Data Agent';
+      case 'statista_agent':
+        return 'Market Insights Agent';
       case 'sequential_agent':
         return 'Coordinator';
       default:
@@ -95,7 +102,7 @@ export default function EventStream({ events, isLoading = false }: EventStreamPr
     }
   };
 
-  const displayContent = (event: StreamEvent, eventIndex: number) => {
+  const displayContent = (event: AnalysisEvent, eventIndex: number) => {
     try {
       const regex = /```json\s*([\s\S]*?)\s*```/;
       const match = event.content.match(regex);
@@ -121,13 +128,27 @@ export default function EventStream({ events, isLoading = false }: EventStreamPr
           } catch {
           }
           break;
-                  case 'fetch_website_agent':
-            return (
-              <div className="flex flex-row gap-2 items-center">
-                <p>Summarizing</p>
-                <Loader size={4} />
-              </div>
-            )
+        case 'fetch_website_agent':
+          return (
+            <div className="flex flex-row gap-2 items-center">
+              <p>Summarizing web content</p>
+              <Loader size={4} />
+            </div>
+          );
+        case 'bigquery_agent':
+          return (
+            <div className="flex flex-row gap-2 items-center">
+              <p>Analyzing BigQuery datasets</p>
+              <Loader size={4} />
+            </div>
+          );
+        case 'statista_agent':
+          return (
+            <div className="flex flex-row gap-2 items-center">
+              <p>Generating market insights</p>
+              <Loader size={4} />
+            </div>
+          );
         case 'sequential_agent':
           break;
       }
@@ -147,7 +168,7 @@ export default function EventStream({ events, isLoading = false }: EventStreamPr
         </h3>
         
         <div className="space-y-4 max-h-96 overflow-y-auto">
-          {events.filter(event => event.is_final).map((event, index) => (
+          {events.filter(event => event.is_final && event.author !== 'final_results').map((event, index) => (
             <div
               key={index}
               className={`flex gap-4 p-4 rounded-xl transition-all duration-300 bg-neutral-900`}
@@ -163,11 +184,6 @@ export default function EventStream({ events, isLoading = false }: EventStreamPr
                   <span className="font-medium text-white">
                     {getAgentName(event.author)}
                   </span>
-                  {event.timestamp && (
-                    <span className="text-xs text-neutral-400">
-                      {event.timestamp.toLocaleTimeString()}
-                    </span>
-                  )}
                 </div>
                 
                 {event.content && (

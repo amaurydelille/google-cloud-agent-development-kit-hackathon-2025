@@ -21,4 +21,26 @@ export interface AnalysisResults {
     factors: string[];
     mitigations: string[];
   };
+}
+
+export interface MetricData {
+  metric_name: string;
+  value: number | string;
+  unit: string;
+  source_dataset: string;
+  insight_summary: string;
+}
+
+export interface StructuredAnalysisResult {
+  summary: string;
+  bigquery_metrics: MetricData[];
+  statista_insights: MetricData[];
+  timestamp: number;
+}
+
+export interface AnalysisEvent {
+  author: string;
+  content: string;
+  is_final: boolean;
+  structured_data?: StructuredAnalysisResult;
 } 
