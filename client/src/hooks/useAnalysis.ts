@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { AnalysisEvent } from '../types/analysis';
 
 export interface AnalysisStage {
   id: string;
@@ -11,13 +12,6 @@ export interface SimpleAnalysisResults {
   opportunities: string[];
 }
 
-export interface StreamEvent {
-  author: string;
-  content: string;
-  is_final: boolean;
-  timestamp: Date;
-}
-
 export const useAnalysis = (stages: AnalysisStage[]) => {
   const [businessIdea, setBusinessIdea] = useState<string>('');
   const [analyzing, setAnalyzing] = useState(false);
@@ -25,7 +19,7 @@ export const useAnalysis = (stages: AnalysisStage[]) => {
   const [progress, setProgress] = useState(0);
   const [currentStage, setCurrentStage] = useState<AnalysisStage | null>(null);
   const [completedStages, setCompletedStages] = useState<string[]>([]);
-  const [events, setEvents] = useState<StreamEvent[]>([]);
+  const [events, setEvents] = useState<AnalysisEvent[]>([]);
 
   const startAnalysis = useCallback(async (idea: string) => {
     setBusinessIdea(idea);
@@ -45,8 +39,6 @@ export const useAnalysis = (stages: AnalysisStage[]) => {
 
       const reader = response.body?.getReader();
       if (!reader) throw new Error('No reader available');
-
-      let intermediateResults = '';
 
       while (true) {
         const { done, value } = await reader.read();
@@ -69,15 +61,13 @@ export const useAnalysis = (stages: AnalysisStage[]) => {
                 setEvents(prev => [...prev, {
                   author: 'system',
                   content: 'The AI model is currently overloaded. Please try again in a few moments.',
-                  is_final: true,
-                  timestamp: new Date()
+                  is_final: true
                 }]);
               } else {
                 setEvents(prev => [...prev, {
                   author: 'system',
                   content: `Analysis failed: ${errorMessage}`,
-                  is_final: true,
-                  timestamp: new Date()
+                  is_final: true
                 }]);
               }
               
@@ -85,31 +75,29 @@ export const useAnalysis = (stages: AnalysisStage[]) => {
               return;
             }
 
-            const streamEvent: StreamEvent = {
+            const analysisEvent: AnalysisEvent = {
               author: data.author,
               content: data.content || '',
               is_final: data.is_final || false,
-              timestamp: new Date()
+              structured_data: data.structured_data
             };
 
-            setEvents(prev => [...prev, streamEvent]);
+            setEvents(prev => [...prev, analysisEvent]);
 
-            if (data.author === 'search_agent') {
+            if (data.author === 'search_agent' && data.is_final) {
               setCurrentStage(stages[1]);
               setCompletedStages(prev => [...prev, stages[0].id]);
+              setProgress(25);
+            } else if (data.author === 'fetch_website_agent' && data.is_final) {
               setProgress(50);
-            } else if (data.author === 'fetch_website_agent') {
-              setProgress(100);
               setCompletedStages(prev => [...prev, stages[1].id]);
-              intermediateResults += data.content;
-              
-              if (data.is_final) {
-                setResults({
-                  summary: intermediateResults,
-                  opportunities: []
-                });
-                setAnalyzing(false);
-              }
+            } else if (data.author === 'bigquery_agent' && data.is_final) {
+              setProgress(75);
+            } else if (data.author === 'statista_agent' && data.is_final) {
+              setProgress(90);
+            } else if (data.author === 'final_results' && data.structured_data) {
+              setProgress(100);
+              setAnalyzing(false);
             }
           }
         }
@@ -122,8 +110,7 @@ export const useAnalysis = (stages: AnalysisStage[]) => {
       setEvents(prev => [...prev, {
         author: 'system',
         content: `Connection error: ${errorMessage}. Please check your internet connection and try again.`,
-        is_final: true,
-        timestamp: new Date()
+        is_final: true
       }]);
       
       setAnalyzing(false);

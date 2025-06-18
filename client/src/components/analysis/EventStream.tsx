@@ -117,8 +117,14 @@ export default function EventStream({ events, isLoading = false }: EventStreamPr
                 return (
                   <div className="flex flex-col gap-2">
                     <div className="flex flex-row gap-2 items-center">
-                      <p>Searching for information at</p>
-                      <Loader size={4} />
+                      {event.is_final ? (
+                        <p>✅ Search completed successfully</p>
+                      ) : (
+                        <>
+                          <p>Searching for data at</p>
+                          <Loader size={4} />
+                        </>
+                      )}
                     </div>
                     <SequentialUrls urls={jsonContent.urls} eventIndex={eventIndex} />
                   </div>
@@ -127,8 +133,14 @@ export default function EventStream({ events, isLoading = false }: EventStreamPr
             }
           } catch {
           }
+          if (event.is_final) {
+            return <p>✅ Search completed successfully</p>;
+          }
           break;
         case 'fetch_website_agent':
+          if (event.is_final) {
+            return <p>✅ Web content analysis completed</p>;
+          }
           return (
             <div className="flex flex-row gap-2 items-center">
               <p>Summarizing web content</p>
@@ -136,6 +148,9 @@ export default function EventStream({ events, isLoading = false }: EventStreamPr
             </div>
           );
         case 'bigquery_agent':
+          if (event.is_final) {
+            return <p>✅ BigQuery data analysis completed</p>;
+          }
           return (
             <div className="flex flex-row gap-2 items-center">
               <p>Analyzing BigQuery datasets</p>
@@ -143,6 +158,9 @@ export default function EventStream({ events, isLoading = false }: EventStreamPr
             </div>
           );
         case 'statista_agent':
+          if (event.is_final) {
+            return <p>✅ Market insights generated successfully</p>;
+          }
           return (
             <div className="flex flex-row gap-2 items-center">
               <p>Generating market insights</p>
@@ -150,7 +168,25 @@ export default function EventStream({ events, isLoading = false }: EventStreamPr
             </div>
           );
         case 'sequential_agent':
-          break;
+          if (event.is_final) {
+            return <p>✅ Analysis coordination completed</p>;
+          }
+          return (
+            <div className="flex flex-row gap-2 items-center">
+              <p>Coordinating analysis workflow</p>
+              <Loader size={4} />
+            </div>
+          );
+        default:
+          if (event.is_final) {
+            return <p>✅ {getAgentName(event.author)} completed</p>;
+          }
+          return (
+            <div className="flex flex-row gap-2 items-center">
+              <p>Processing with {getAgentName(event.author)}</p>
+              <Loader size={4} />
+            </div>
+          );
       }
 
       return content;
@@ -168,7 +204,7 @@ export default function EventStream({ events, isLoading = false }: EventStreamPr
         </h3>
         
         <div className="space-y-4 max-h-96 overflow-y-auto">
-          {events.filter(event => event.is_final && event.author !== 'final_results').map((event, index) => (
+          {events.filter(event => event.author !== 'final_results').map((event, index) => (
             <div
               key={index}
               className={`flex gap-4 p-4 rounded-xl transition-all duration-300 bg-neutral-900`}
