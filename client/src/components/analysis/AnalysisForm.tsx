@@ -17,11 +17,11 @@ export default function AnalysisForm({ onAnalyze }: AnalysisFormProps) {
   return (
     <div className="relative z-10 flex-1 flex items-center justify-center px-6">
       <div className="w-full max-w-4xl">
-        <div className="text-center mb-12">
-          <h2 className="text-5xl font-extralight text-neutral-100 mb-6 tracking-wide">
-            Analyze your business idea
+        <div className="text-center mb-5">
+          <h2 className="text-5xl font-semibold text-neutral-100 mb-2 tracking-wide">
+            VentureScope
           </h2>
-          <p className="text-xl text-neutral-300 max-w-2xl mx-auto">
+          <p className="text-md font-light text-neutral-300 max-w-2xl mx-auto">
             Get comprehensive market analysis, audience insights, and risk assessment powered by advanced AI
           </p>
         </div>
@@ -33,14 +33,9 @@ export default function AnalysisForm({ onAnalyze }: AnalysisFormProps) {
               spellCheck={false}
               onChange={(e) => setBusinessIdea(e.target.value)}
               placeholder="Describe your business idea in detail..."
-              className="w-full min-h-[140px] p-6 bg-neutral-900 border border-neutral-700/20 rounded-xl focus:outline-none focus:ring-1 focus:ring-neutral-500/50 focus:border-neutral-500/50 resize-none text-neutral-100 placeholder-neutral-400 text-lg transition-all duration-300"
+              className="w-full min-h-[140px] p-6 bg-neutral-800 border border-neutral-700/20 rounded-xl focus:outline-none focus:ring-1 focus:ring-neutral-500/50 focus:border-neutral-500/50 resize-none text-neutral-100 placeholder-neutral-400 text-lg transition-all duration-300"
               rows={5}
             />
-            <div className="absolute top-4 right-4 text-neutral-500">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-              </svg>
-            </div>
           </div>
           
           <Button

@@ -84,14 +84,14 @@ export default function MetricsDisplay({ title, subtitle, metrics, type, isAccor
     return (
       <div className="space-y-4">
         {metrics.map((metric, index) => (
-          <div key={index} className="bg-slate-800/40 rounded-xl p-5 border border-slate-700/30 hover:border-slate-600/50 transition-all duration-200">
+          <div key={index} className="bg-slate-800/40 rounded-xl p-3 border border-slate-700/30 hover:border-slate-600/50 transition-all duration-200">
             <div className="flex justify-between items-start mb-3">
-              <h4 className="font-medium text-white text-base">{metric.metric_name}</h4>
+              <h4 className="font-medium text-neutral-200 text-base">{metric.metric_name}</h4>
               <span className="text-slate-400 text-xs px-2 py-1 bg-slate-700/50 rounded-md">{metric.source_dataset}</span>
             </div>
             
             <div className="flex items-baseline gap-2 mb-4">
-              <span className="text-2xl font-bold text-white">
+              <span className="text-3xl font-bold text-white">
                 {typeof metric.value === 'number' ? metric.value.toLocaleString() : metric.value}
               </span>
               {metric.unit && (

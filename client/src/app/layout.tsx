@@ -7,7 +7,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Business Intelligence Platform",
+  title: "VentureScope",
   description: "AI-powered business analysis and market intelligence platform",
 };
 

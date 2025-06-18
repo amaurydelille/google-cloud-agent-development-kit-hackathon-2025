@@ -1,5 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { 
+  Search, 
+  Globe, 
+  BarChart3, 
+  TrendingUp, 
+  Zap, 
+  Bot,
+  Brain,
+  CheckCircle2
+} from 'lucide-react';
 import Loader from '../ui/Loader';
 import { AnalysisEvent } from '../../types/analysis';
 
@@ -69,19 +79,21 @@ export default function EventStream({ events, isLoading = false }: EventStreamPr
   }, [events, isLoading, router]);
 
   const getAgentIcon = (author: string) => {
+    const iconProps = { size: 20, className: "text-white" };
+    
     switch (author) {
       case 'search_agent':
-        return '🔍';
+        return <Search {...iconProps} />;
       case 'fetch_website_agent':
-        return '🌐';
+        return <Globe {...iconProps} />;
       case 'bigquery_agent':
-        return '📊';
+        return <BarChart3 {...iconProps} />;
       case 'statista_agent':
-        return '📈';
+        return <TrendingUp {...iconProps} />;
       case 'sequential_agent':
-        return '⚡';
+        return <Zap {...iconProps} />;
       default:
-        return '🤖';
+        return <Bot {...iconProps} />;
     }
   };
 
@@ -118,7 +130,10 @@ export default function EventStream({ events, isLoading = false }: EventStreamPr
                   <div className="flex flex-col gap-2">
                     <div className="flex flex-row gap-2 items-center">
                       {event.is_final ? (
-                        <p>✅ Search completed successfully</p>
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 size={16} className="text-green-400" />
+                          <p>Search completed successfully</p>
+                        </div>
                       ) : (
                         <>
                           <p>Searching for data at</p>
@@ -134,12 +149,22 @@ export default function EventStream({ events, isLoading = false }: EventStreamPr
           } catch {
           }
           if (event.is_final) {
-            return <p>✅ Search completed successfully</p>;
+            return (
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={16} className="text-green-400" />
+                <p>Search completed successfully</p>
+              </div>
+            );
           }
           break;
         case 'fetch_website_agent':
           if (event.is_final) {
-            return <p>✅ Web content analysis completed</p>;
+            return (
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={16} className="text-green-400" />
+                <p>Web content analysis completed</p>
+              </div>
+            );
           }
           return (
             <div className="flex flex-row gap-2 items-center">
@@ -149,7 +174,12 @@ export default function EventStream({ events, isLoading = false }: EventStreamPr
           );
         case 'bigquery_agent':
           if (event.is_final) {
-            return <p>✅ BigQuery data analysis completed</p>;
+            return (
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={16} className="text-green-400" />
+                <p>BigQuery data analysis completed</p>
+              </div>
+            );
           }
           return (
             <div className="flex flex-row gap-2 items-center">
@@ -159,7 +189,12 @@ export default function EventStream({ events, isLoading = false }: EventStreamPr
           );
         case 'statista_agent':
           if (event.is_final) {
-            return <p>✅ Market insights generated successfully</p>;
+            return (
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={16} className="text-green-400" />
+                <p>Market insights generated successfully</p>
+              </div>
+            );
           }
           return (
             <div className="flex flex-row gap-2 items-center">
@@ -169,7 +204,12 @@ export default function EventStream({ events, isLoading = false }: EventStreamPr
           );
         case 'sequential_agent':
           if (event.is_final) {
-            return <p>✅ Analysis coordination completed</p>;
+            return (
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={16} className="text-green-400" />
+                <p>Analysis coordination completed</p>
+              </div>
+            );
           }
           return (
             <div className="flex flex-row gap-2 items-center">
@@ -179,7 +219,12 @@ export default function EventStream({ events, isLoading = false }: EventStreamPr
           );
         default:
           if (event.is_final) {
-            return <p>✅ {getAgentName(event.author)} completed</p>;
+            return (
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={16} className="text-green-400" />
+                <p>{getAgentName(event.author)} completed</p>
+              </div>
+            );
           }
           return (
             <div className="flex flex-row gap-2 items-center">
@@ -199,7 +244,7 @@ export default function EventStream({ events, isLoading = false }: EventStreamPr
     <div className="w-full max-w-4xl mx-auto space-y-4">
       <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6">
         <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-          <span className="text-2xl">🧠</span>
+          <Brain size={24} className="text-blue-400" />
           Analysis in Progress
         </h3>
         

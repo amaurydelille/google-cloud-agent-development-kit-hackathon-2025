@@ -89,7 +89,6 @@ export default function Dashboard() {
   if (loading) {
     return (
       <PageLayout>
-        <Header />
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
           <div className="flex items-center justify-center min-h-screen">
             <div className="text-center">
@@ -109,7 +108,6 @@ export default function Dashboard() {
   if (!analysisResult) {
     return (
       <PageLayout>
-        <Header />
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
           <div className="flex items-center justify-center min-h-screen">
             <div className="text-center max-w-md">
@@ -138,7 +136,6 @@ export default function Dashboard() {
 
   return (
     <PageLayout>
-      <Header />
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="max-w-5xl mx-auto px-6 py-8">
           
