@@ -79,6 +79,10 @@ class GoogleAgent():
         You will receive a list of URLs from the previous agent. For each URL, use the fetch_website_content tool 
         to fetch the content and then provide a comprehensive summary of all the websites combined.
 
+        Also, you should analyze the sentiment of the content of the websites and return the sentiment score and magnitude.
+        You have a tool to run sentiment analysis on the content of the websites.
+        The final sentiment score and magnitude is the average of the sentiment scores and magnitudes of the websites.
+
         Your summary should:
         - Be in the same language as the query
         - Focus on business opportunities and insights
@@ -87,6 +91,13 @@ class GoogleAgent():
         - Contain no more than 300 words.
 
         Here is the query: {self.query}
+
+        Here is the format of the output:
+        {{
+            "summary": "...",
+            "sentiment_score": ...,
+            "sentiment_magnitude": ...
+        }}
         """
 
         self.fetch_website_agent = LlmAgent(
@@ -104,11 +115,13 @@ class GoogleAgent():
 
         BIGQUERY_INSTRUCTION = f"""
         You are a data analysis agent that can query BigQuery public datasets to find real-world statistics.
-        Your task is to find any relevant metrics, growth trends, or economic indicators for the following query:
+        Your task is to find any relevant metrics, growth trends, or economic indicators for the following user query:
 
-        Query: "{self.query}"
+        User query: "{self.query}"
 
-        Use keywords from the query to match BigQuery public datasets (e.g., `google_trends`, `commerce`, `census_bureau`).
+        You have to write SQL queries to find the most relevant metrics, growth trends, or economic indicators related to the user query.
+        You can use any public dataset available in BigQuery.
+        You are also given a tool to run the SQL queries.
 
         Return a JSON output being a list of objects with the following structure:
         {{

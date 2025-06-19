@@ -1,4 +1,5 @@
 from google.cloud import language_v1, bigquery
+import json
 
 def run_sentiment_analysis(text: str) -> tuple[float, float]:
     """
@@ -22,4 +23,6 @@ def run_bigquery_query(sql_query: str):
     """
     client = bigquery.Client()
     query_job = client.query(sql_query)
-    return query_job.result().to_dataframe().to_json(orient="records")
+    query_response = query_job.result().to_dataframe().to_json(orient="records")
+    print(json.dumps(query_response, indent=4))
+    return query_response
