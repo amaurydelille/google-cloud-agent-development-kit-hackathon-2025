@@ -4,10 +4,11 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageLayout, Header } from '../../components/layout';
 import MetricsDisplay from '../../components/analysis/MetricsDisplay';
-import { MetricData } from '../../types/analysis';
+import SentimentDisplay from '../../components/analysis/SentimentDisplay';
+import { MetricData, SummaryWithSentiment } from '../../types/analysis';
 
 interface AnalysisResult {
-  summary: string;
+  summary: SummaryWithSentiment | string;
   bigquery_metrics?: MetricData[];
   statista_insights?: MetricData[];
   timestamp: string;
@@ -53,6 +54,32 @@ const formatSummary = (text: string): string => {
   }
   
   return processedLines.join('\n');
+};
+
+const parseSummaryData = (summary: SummaryWithSentiment | string): { text: string; sentiment?: { score: number; magnitude: number } } => {
+  if (typeof summary === 'string') {
+    try {
+      const parsed = JSON.parse(summary) as SummaryWithSentiment;
+      return {
+        text: parsed.summary,
+        sentiment: {
+          score: parsed.sentiment_score,
+          magnitude: parsed.sentiment_magnitude
+        }
+      };
+    } catch {
+      return { text: summary };
+    }
+  } else if (summary && typeof summary === 'object') {
+    return {
+      text: summary.summary,
+      sentiment: {
+        score: summary.sentiment_score,
+        magnitude: summary.sentiment_magnitude
+      }
+    };
+  }
+  return { text: '' };
 };
 
 export default function Dashboard() {
@@ -285,10 +312,23 @@ export default function Dashboard() {
               
               <div className={`transition-all duration-300 ease-in-out ${accordionState.summary ? 'max-h-[3000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
                 <div className="p-8">
-                  <div 
-                    className="leading-relaxed space-y-4"
-                    dangerouslySetInnerHTML={{ __html: formatSummary(analysisResult.summary) }}
-                  />
+                  {(() => {
+                    const summaryData = parseSummaryData(analysisResult.summary);
+                    return (
+                      <>
+                        {summaryData.sentiment && (
+                          <SentimentDisplay 
+                            sentimentScore={summaryData.sentiment.score} 
+                            sentimentMagnitude={summaryData.sentiment.magnitude} 
+                          />
+                        )}
+                        <div 
+                          className="leading-relaxed space-y-4"
+                          dangerouslySetInnerHTML={{ __html: formatSummary(summaryData.text) }}
+                        />
+                      </>
+                    );
+                  })()}
                   
                   <div className="mt-8 pt-6 border-t border-slate-700/30 flex items-center justify-between">
                     <div className="flex items-center gap-2 text-slate-400 text-sm">

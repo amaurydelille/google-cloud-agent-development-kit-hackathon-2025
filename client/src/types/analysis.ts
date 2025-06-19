@@ -31,8 +31,14 @@ export interface MetricData {
   insight_summary: string;
 }
 
-export interface StructuredAnalysisResult {
+export interface SummaryWithSentiment {
   summary: string;
+  sentiment_score: number;
+  sentiment_magnitude: number;
+}
+
+export interface StructuredAnalysisResult {
+  summary: SummaryWithSentiment | string;
   bigquery_metrics: MetricData[];
   statista_insights: MetricData[];
   timestamp: number;

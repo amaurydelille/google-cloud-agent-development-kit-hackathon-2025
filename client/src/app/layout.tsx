@@ -6,6 +6,8 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
+
+
 export const metadata: Metadata = {
   title: "VentureScope",
   description: "AI-powered business analysis and market intelligence platform",

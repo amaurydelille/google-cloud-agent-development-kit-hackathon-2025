@@ -63,12 +63,8 @@ export default function EventStream({ events, isLoading = false }: EventStreamPr
     if (finalResultsEvent && finalResultsEvent.structured_data && !isLoading) {
       const structuredData = finalResultsEvent.structured_data;
       
-      const formattedSummary = structuredData.summary
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>');
-      
       sessionStorage.setItem('analysisResult', JSON.stringify({
-        summary: formattedSummary,
+        summary: structuredData.summary,
         bigquery_metrics: structuredData.bigquery_metrics,
         statista_insights: structuredData.statista_insights,
         timestamp: new Date().toISOString()

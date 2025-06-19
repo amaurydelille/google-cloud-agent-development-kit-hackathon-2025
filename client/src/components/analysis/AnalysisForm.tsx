@@ -1,5 +1,10 @@
 import { useState } from 'react';
-import Button from '../ui/Button';
+import { Besley } from 'next/font/google';
+
+const besley = Besley({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
 
 interface AnalysisFormProps {
   onAnalyze: (businessIdea: string) => void;
@@ -18,7 +23,7 @@ export default function AnalysisForm({ onAnalyze }: AnalysisFormProps) {
     <div className="relative z-10 flex-1 flex items-center justify-center px-6">
       <div className="w-full max-w-4xl">
         <div className="text-center mb-5">
-          <h2 className="text-5xl font-semibold text-neutral-100 mb-2 tracking-wide">
+          <h2 className={`text-5xl font-medium text-neutral-100 mb-2 tracking-wide ${besley.className}`}>
             VentureScope
           </h2>
           <p className="text-md font-light text-neutral-300 max-w-2xl mx-auto">
@@ -26,26 +31,27 @@ export default function AnalysisForm({ onAnalyze }: AnalysisFormProps) {
           </p>
         </div>
 
-        <div className="space-y-6">
-          <div className="relative">
+        <div className="flex flex-row gap-4 w-full items-center">
+          <div className="relative flex-1">
             <textarea
               value={businessIdea}
               spellCheck={false}
               onChange={(e) => setBusinessIdea(e.target.value)}
               placeholder="Describe your business idea in detail..."
-              className="w-full min-h-[140px] p-6 bg-neutral-800 border border-neutral-700/20 rounded-xl focus:outline-none focus:ring-1 focus:ring-neutral-500/50 focus:border-neutral-500/50 resize-none text-neutral-100 placeholder-neutral-400 text-lg transition-all duration-300"
-              rows={5}
+              className="w-full p-6 bg-neutral-800 border border-neutral-700/20 rounded-4xl focus:outline-none focus:ring-1 focus:ring-neutral-500/50 focus:border-neutral-500/50 resize-none text-neutral-100 placeholder-neutral-400 text-lg transition-all duration-300"
+              rows={1}
             />
           </div>
           
-          <Button
+          <button
             onClick={handleSubmit}
             disabled={!businessIdea.trim()}
-            size="lg"
-            fullWidth
+            className="cursor-pointer px-8 py-6 bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-3xl transition-all duration-300 hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
           >
-            Analyze Business Idea
-          </Button>
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
         </div>
 
         <div className="grid md:grid-cols-3 gap-8 mt-16">
