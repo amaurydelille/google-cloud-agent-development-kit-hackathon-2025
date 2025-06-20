@@ -10,8 +10,11 @@ from google.genai import types
 from pydantic import BaseModel, Field
 from google.adk.sessions import InMemorySessionService
 from dotenv import load_dotenv
-from typing import List
+from typing import List, Dict, Any
 from utils.models import run_sentiment_analysis, run_bigquery_query
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -36,6 +39,7 @@ class GoogleAgent():
         self.bigquery_metrics = []
         self.statista_insights = []
         self.final_summary = ""
+        self.agent_errors = {}
 
     async def initialize_agents(self):
         SEARCH_INSTRUCTION = f"""
@@ -77,7 +81,9 @@ class GoogleAgent():
         FETCH_WEBSITE_INSTRUCTION = f"""
         You are a website content agent that can fetch the content of websites given their URLs.
         You will receive a list of URLs from the previous agent. For each URL, use the fetch_website_content tool 
-        to fetch the content and then provide a comprehensive summary of all the websites combined.
+        to fetch the content and then provide a comprehensive summary of all the websites combined. You
+        have to be brutal and honest in your summary. If you think it's not worth it, say so. But if you think it's worth it,
+        say so.
 
         Also, you should analyze the sentiment of the content of the websites and return the sentiment score and magnitude.
         You have a tool to run sentiment analysis on the content of the websites.
@@ -98,6 +104,9 @@ class GoogleAgent():
             "sentiment_score": ...,
             "sentiment_magnitude": ...
         }}
+
+        DO NOT include "```json" or "```" in your response.
+        DO NOT include any other text in your response.
         """
 
         self.fetch_website_agent = LlmAgent(
@@ -120,8 +129,9 @@ class GoogleAgent():
         User query: "{self.query}"
 
         You have to write SQL queries to find the most relevant metrics, growth trends, or economic indicators related to the user query.
+        Then you have to run the SQL queries to get the data, using the function tool I gave you.
         You can use any public dataset available in BigQuery.
-        You are also given a tool to run the SQL queries.
+        You have to return numbers as metrics in the field "value".
 
         Return a JSON output being a list of objects with the following structure:
         {{
@@ -150,6 +160,7 @@ class GoogleAgent():
         STATISTA_INSTRUCTION = f"""
         You are a summarization agent that analyzes any data summaries or scraped content from known economic sources like Statista.
         You will simulate or synthesize insights about the business domain in this query:
+        You have to return numbers as metrics in the field "value".
 
         "{self.query}"
 
@@ -214,42 +225,74 @@ class GoogleAgent():
 
     async def call_agent_async(self):
         final_response = None
-        async for event in self.runner_agent.run_async(
-            session_id="google_session",
-            user_id="google_user",
-            new_message=types.Content(parts=[types.Part(text=self.query)])
-        ):
-            yield event
-            if event.is_final_response():
-                if event.content and event.content.parts[0].text:
-                    final_response = event.content.parts[0].text
+        try:
+            async for event in self.runner_agent.run_async(
+                session_id="google_session",
+                user_id="google_user",
+                new_message=types.Content(parts=[types.Part(text=self.query)])
+            ):
+                yield event
+                if event.is_final_response():
+                    if event.content and event.content.parts[0].text:
+                        final_response = event.content.parts[0].text
+                        
+                        try:
+                            if event.author == "bigquery_agent":
+                                self.bigquery_metrics = self.parse_json_response(final_response)
+                                logger.info(f"✅ BigQuery metrics collected: {len(self.bigquery_metrics)} items")
+                            elif event.author == "statista_agent":
+                                self.statista_insights = self.parse_json_response(final_response)
+                                logger.info(f"✅ Statista insights collected: {len(self.statista_insights)} items")
+                            elif event.author == "fetch_website_agent":
+                                self.final_summary = final_response
+                                logger.info(f"✅ Website summary collected")
+                            
+                            logger.info(f"✅ {event.author} completed successfully")
+                        except Exception as e:
+                            error_msg = f"Error processing {event.author} response: {str(e)}"
+                            logger.error(error_msg)
+                            self.agent_errors[event.author] = error_msg
+                            
+                            # Set empty results for failed agents
+                            if event.author == "bigquery_agent":
+                                self.bigquery_metrics = []
+                            elif event.author == "statista_agent":
+                                self.statista_insights = []
+                            elif event.author == "fetch_website_agent":
+                                self.final_summary = "Error processing website content."
+                    elif event.actions and event.actions.escalate:
+                        error_msg = f"❌ {event.author} failed"
+                        logger.error(error_msg)
+                        self.agent_errors[event.author] = error_msg
+                        
+                        # Set empty results for failed agents
+                        if event.author == "bigquery_agent":
+                            self.bigquery_metrics = []
+                        elif event.author == "statista_agent":
+                            self.statista_insights = []
+                        elif event.author == "fetch_website_agent":
+                            self.final_summary = "Error processing website content."
                     
-                    if event.author == "bigquery_agent":
-                        self.bigquery_metrics = self.parse_json_response(final_response)
-                        print(f"✅ BigQuery metrics collected: {len(self.bigquery_metrics)} items")
-                    elif event.author == "statista_agent":
-                        self.statista_insights = self.parse_json_response(final_response)
-                        print(f"✅ Statista insights collected: {len(self.statista_insights)} items")
-                    elif event.author == "fetch_website_agent":
-                        self.final_summary = final_response
-                        print(f"✅ Website summary collected")
-                    
-                    print(f"✅ {event.author} completed successfully")
-                elif event.actions and event.actions.escalate:
-                    print(f"❌ {event.author} failed")
+                    if event.author == "statista_agent":
+                        break
+            
+            if not final_response:
+                error_msg = "❌ No final response received"
+                logger.error(error_msg)
+                self.agent_errors["final"] = error_msg
                 
-                if event.author == "statista_agent":
-                    break
-        
-        if not final_response:
-            print("❌ No final response received")
+        except Exception as e:
+            error_msg = f"Fatal error in agent execution: {str(e)}"
+            logger.error(error_msg)
+            self.agent_errors["fatal"] = error_msg
 
-    def get_structured_results(self):
+    def get_structured_results(self) -> Dict[str, Any]:
         return {
             "summary": self.final_summary,
             "bigquery_metrics": self.bigquery_metrics,
             "statista_insights": self.statista_insights,
-            "timestamp": asyncio.get_event_loop().time()
+            "timestamp": asyncio.get_event_loop().time(),
+            "errors": self.agent_errors if self.agent_errors else None
         }
 
     async def run(self):
