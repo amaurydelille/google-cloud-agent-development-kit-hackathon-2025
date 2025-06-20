@@ -1,20 +1,30 @@
 from fastapi import FastAPI, Request, Response
 import uvicorn
 from agents.google.google_agent import GoogleAgent
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 import json
 import logging
 
 app = FastAPI()
 
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with your frontend domain
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-@app.get("/")
+@app.get("/api")
 def read_root():
     return {"message": "Hello World"}
 
-@app.get("/health")
+@app.get("/api/health")
 def health_check():
     return {"status": "healthy"}
 
@@ -45,11 +55,7 @@ async def event_generator(google_agent):
         error_data = {"error": str(e)}
         yield f"data: {json.dumps(error_data)}\n\n"
 
-@app.get("/")
-async def home():
-    return {"message": "Hello World"}
-
-@app.post("/search")
+@app.post("/api/search")
 async def search(request: Request):
     try:
         data = await request.json()
@@ -59,8 +65,12 @@ async def search(request: Request):
             media_type="text/event-stream"
         )
     except Exception as e:
-        return {"message": str(e)}
+        return JSONResponse(
+            status_code=500,
+            content={"message": str(e)}
+        )
 
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+# Remove the uvicorn.run() call as Vercel handles this
+# if __name__ == "__main__":
+#     uvicorn.run(app, host="0.0.0.0", port=8000)
 
