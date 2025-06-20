@@ -49,4 +49,8 @@ export interface AnalysisEvent {
   content: string;
   is_final: boolean;
   structured_data?: StructuredAnalysisResult;
+  error?: {
+    message: string;
+    type?: string;
+  };
 } 

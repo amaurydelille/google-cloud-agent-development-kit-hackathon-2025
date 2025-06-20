@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PageLayout, Header } from '../../components/layout';
+import { PageLayout } from '../../components/layout';
 import MetricsDisplay from '../../components/analysis/MetricsDisplay';
 import SentimentDisplay from '../../components/analysis/SentimentDisplay';
 import { MetricData, SummaryWithSentiment } from '../../types/analysis';
@@ -59,7 +59,11 @@ const formatSummary = (text: string): string => {
 const parseSummaryData = (summary: SummaryWithSentiment | string): { text: string; sentiment?: { score: number; magnitude: number } } => {
   if (typeof summary === 'string') {
     try {
-      const parsed = JSON.parse(summary) as SummaryWithSentiment;
+      const regex = /```json\s*([\s\S]*?)\s*```/;
+      const match = summary.match(regex);
+      const content = match ? match[1].trim() : summary;
+      const parsed = JSON.parse(content) as SummaryWithSentiment;
+      console.log(parsed);
       return {
         text: parsed.summary,
         sentiment: {
@@ -163,7 +167,7 @@ export default function Dashboard() {
 
   return (
     <PageLayout>
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <div className="min-h-screen bg-neutral-900">
         <div className="max-w-5xl mx-auto px-6 py-8">
           
           <div className="mb-8">
@@ -187,10 +191,10 @@ export default function Dashboard() {
 
           <div className="space-y-6">
             
-            <div className="bg-slate-800/30 backdrop-blur-xl rounded-2xl border border-slate-700/30 overflow-hidden">
+            <div className="bg-neutral-800 rounded-2xl overflow-hidden">
               <button
                 onClick={() => toggleAccordion('analytics')}
-                className="w-full bg-gradient-to-r from-slate-800/50 to-slate-700/30 px-8 py-6 border-b border-slate-700/30 hover:from-slate-800/70 hover:to-slate-700/50 transition-all duration-200"
+                className="cursor-pointer w-full px-8 py-6 transition-all duration-200"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -233,10 +237,10 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="bg-slate-800/30 backdrop-blur-xl rounded-2xl border border-slate-700/30 overflow-hidden">
+            <div className="bg-neutral-800 rounded-2xl overflow-hidden">
               <button
                 onClick={() => toggleAccordion('insights')}
-                className="w-full bg-gradient-to-r from-slate-800/50 to-slate-700/30 px-8 py-6 border-b border-slate-700/30 hover:from-slate-800/70 hover:to-slate-700/50 transition-all duration-200"
+                className="cursor-pointer w-full px-8 py-6 transition-all duration-200"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -279,10 +283,10 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="bg-slate-800/30 backdrop-blur-xl rounded-2xl border border-slate-700/30 overflow-hidden">
+            <div className="bg-neutral-800 rounded-2xl overflow-hidden">
               <button
                 onClick={() => toggleAccordion('summary')}
-                className="w-full bg-gradient-to-r from-slate-800/50 to-slate-700/30 px-8 py-6 border-b border-slate-700/30 hover:from-slate-800/70 hover:to-slate-700/50 transition-all duration-200"
+                className="cursor-pointer w-full px-8 py-6 transition-all duration-200"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { AnalysisEvent } from '../types/analysis';
 
 export interface AnalysisStage {
@@ -21,14 +21,39 @@ export const useAnalysis = (stages: AnalysisStage[]) => {
   const [completedStages, setCompletedStages] = useState<string[]>([]);
   const [events, setEvents] = useState<AnalysisEvent[]>([]);
 
+  // Load persisted state on mount
+  useEffect(() => {
+    try {
+      const storedProgress = sessionStorage.getItem('analysisProgress');
+      if (storedProgress) {
+        const { progress: savedProgress, currentStage: savedCurrentStage, completedStages: savedCompletedStages } = JSON.parse(storedProgress);
+        setProgress(savedProgress);
+        setCurrentStage(savedCurrentStage);
+        setCompletedStages(savedCompletedStages);
+      }
+    } catch (error) {
+      console.error('Failed to load persisted progress:', error);
+    }
+  }, []);
+
+  // Save state to sessionStorage whenever it changes
+  useEffect(() => {
+    if (progress > 0 || currentStage !== null || completedStages.length > 0) {
+      sessionStorage.setItem('analysisProgress', JSON.stringify({
+        progress,
+        currentStage,
+        completedStages
+      }));
+    }
+  }, [progress, currentStage, completedStages]);
+
   const startAnalysis = useCallback(async (idea: string) => {
     setBusinessIdea(idea);
     setAnalyzing(true);
     setResults(null);
-    setProgress(0);
-    setCurrentStage(stages[0]);
-    setCompletedStages([]);
-    setEvents([]);
+    
+    // Don't reset progress states here - they will persist from the previous run
+    // Only reset if explicitly requested via resetAnalysis
 
     try {
       const response = await fetch('/api/search', {
@@ -79,7 +104,11 @@ export const useAnalysis = (stages: AnalysisStage[]) => {
               author: data.author,
               content: data.content || '',
               is_final: data.is_final || false,
-              structured_data: data.structured_data
+              structured_data: data.structured_data,
+              error: data.structured_data?.errors?.[data.author] ? {
+                message: data.structured_data.errors[data.author],
+                type: 'agent_error'
+              } : undefined
             };
 
             setEvents(prev => [...prev, analysisEvent]);
@@ -93,6 +122,18 @@ export const useAnalysis = (stages: AnalysisStage[]) => {
               setCompletedStages(prev => [...prev, stages[1].id]);
             } else if (data.author === 'bigquery_agent' && data.is_final) {
               setProgress(75);
+              // Continue even if BigQuery fails
+              if (data.structured_data?.errors?.bigquery_agent) {
+                setEvents(prev => [...prev, {
+                  author: 'system',
+                  content: 'BigQuery analysis completed with limited data due to authentication error. Proceeding with available information.',
+                  is_final: true,
+                  error: {
+                    message: 'BigQuery authentication failed',
+                    type: 'auth_error'
+                  }
+                }]);
+              }
             } else if (data.author === 'statista_agent' && data.is_final) {
               setProgress(90);
             } else if (data.author === 'final_results' && data.structured_data) {
@@ -125,6 +166,8 @@ export const useAnalysis = (stages: AnalysisStage[]) => {
     setCurrentStage(null);
     setCompletedStages([]);
     setEvents([]);
+    // Clear persisted progress
+    sessionStorage.removeItem('analysisProgress');
   }, []);
 
   const generateReport = useCallback(() => {

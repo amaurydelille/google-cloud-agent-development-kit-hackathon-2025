@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Search, 
@@ -20,28 +20,30 @@ interface EventStreamProps {
 
 interface SequentialUrlsProps {
   urls: string[];
-  eventIndex: number;
 }
 
-function SequentialUrls({ urls, eventIndex }: SequentialUrlsProps) {
-  const [visibleCount, setVisibleCount] = useState(0);
+function SequentialUrls({ urls }: SequentialUrlsProps) {
+  const [visibleCount, setVisibleCount] = useState(urls.length);
+  const hasAnimatedRef = useRef(false);
 
   useEffect(() => {
-    setVisibleCount(0);
-    
-    urls.forEach((_, index) => {
-      setTimeout(() => {
-        setVisibleCount(index + 1);
-      }, index * 500);
-    });
-  }, [urls, eventIndex]);
+    if (!hasAnimatedRef.current) {
+      setVisibleCount(0);
+      urls.forEach((_, index) => {
+        setTimeout(() => {
+          setVisibleCount(index + 1);
+        }, index * 500);
+      });
+      hasAnimatedRef.current = true;
+    }
+  }, [urls]);
 
   return (
     <ul className="space-y-2">
       {urls.slice(0, visibleCount).map((url) => (
         <li 
           key={url} 
-          className="text-white text-sm italic fade-in-out animate-pulse transition-opacity duration-300"
+          className="text-white text-sm italic fade-in-out transition-opacity duration-300"
         >
           <a href={url} target="_blank" rel="noopener noreferrer" className="hover:text-blue-400">
             {url}
@@ -110,7 +112,7 @@ export default function EventStream({ events, isLoading = false }: EventStreamPr
     }
   };
 
-  const displayContent = (event: AnalysisEvent, eventIndex: number) => {
+  const displayContent = (event: AnalysisEvent) => {
     try {
       const regex = /```json\s*([\s\S]*?)\s*```/;
       const match = event.content.match(regex);
@@ -120,29 +122,45 @@ export default function EventStream({ events, isLoading = false }: EventStreamPr
         case 'search_agent':
           try {
             if (match && match[1]) {
-              const jsonContent = JSON.parse(match[1].trim());
-              if (jsonContent && Array.isArray(jsonContent.urls)) {
-                return (
-                  <div className="flex flex-col gap-2">
-                    <div className="flex flex-row gap-2 items-center">
-                      {event.is_final ? (
-                        <div className="flex items-center gap-2">
-                          <CheckCircle2 size={16} className="text-green-400" />
-                          <p>Search completed successfully</p>
-                        </div>
-                      ) : (
-                        <>
-                          <p>Searching for data at</p>
-                          <Loader size={4} />
-                        </>
-                      )}
+              try {
+                const jsonContent = JSON.parse(match[1].trim());
+                if (jsonContent && Array.isArray(jsonContent.urls)) {
+                  return (
+                    <div className="flex flex-col gap-2">
+                      <div className="flex flex-row gap-2 items-center">
+                        {event.is_final ? (
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 size={16} className="text-green-400" />
+                            <p>Search completed successfully</p>
+                          </div>
+                        ) : (
+                          <>
+                            <p>Searching for data at</p>
+                            <Loader size={4} />
+                          </>
+                        )}
+                      </div>
+                      <SequentialUrls urls={jsonContent.urls} />
                     </div>
-                    <SequentialUrls urls={jsonContent.urls} eventIndex={eventIndex} />
+                  );
+                }
+              } catch (jsonError) {
+                console.warn('Failed to parse JSON content:', jsonError);
+                // Fallback to displaying raw content if JSON parsing fails
+                return (
+                  <div className="flex flex-row gap-2 items-center">
+                    <p>{content}</p>
                   </div>
                 );
               }
             }
-          } catch {
+          } catch (error) {
+            console.warn('Error processing search agent content:', error);
+            return (
+              <div className="flex flex-row gap-2 items-center">
+                <p>{content}</p>
+              </div>
+            );
           }
           if (event.is_final) {
             return (
@@ -265,7 +283,7 @@ export default function EventStream({ events, isLoading = false }: EventStreamPr
                 
                 {event.content && (
                   <div className="text-neutral-300 leading-relaxed whitespace-pre-wrap">
-                    {displayContent(event, index)}
+                    {displayContent(event)}
                   </div>
                 )}
               </div>

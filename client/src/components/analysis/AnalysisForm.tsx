@@ -40,6 +40,12 @@ export default function AnalysisForm({ onAnalyze }: AnalysisFormProps) {
               placeholder="Describe your business idea in detail..."
               className="w-full p-6 bg-neutral-800 border border-neutral-700/20 rounded-4xl focus:outline-none focus:ring-1 focus:ring-neutral-500/50 focus:border-neutral-500/50 resize-none text-neutral-100 placeholder-neutral-400 text-lg transition-all duration-300"
               rows={1}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit();
+                }
+              }}
             />
           </div>
           
