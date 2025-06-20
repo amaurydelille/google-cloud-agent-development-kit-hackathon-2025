@@ -22,11 +22,11 @@ logger = logging.getLogger(__name__)
 
 @app.get("/api")
 def read_root():
-    return {"message": "Hello World"}
+    return { "message": "Hello World" }
 
 @app.get("/api/health")
 def health_check():
-    return {"status": "healthy"}
+    return { "status": "healthy" }
 
 async def event_generator(google_agent):
     try:
