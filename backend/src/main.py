@@ -45,6 +45,10 @@ async def event_generator(google_agent):
         error_data = {"error": str(e)}
         yield f"data: {json.dumps(error_data)}\n\n"
 
+@app.get("/")
+async def home():
+    return {"message": "Hello World"}
+
 @app.post("/search")
 async def search(request: Request):
     try:
