@@ -59,7 +59,7 @@ VentureScope is a sophisticated business analysis platform that leverages Google
 | **Database** | Google BigQuery | Public dataset queries |
 | **Search** | Google Custom Search API | Web research capabilities |
 | **Web Scraping** | BeautifulSoup4, Requests | Content extraction |
-| **Deployment** | Vercel | Serverless Python deployment |
+| **Deployment** | GCP VM | Reliable deployment |
 
 ### **Frontend (TypeScript/React)**
 | Component | Technology | Purpose |
@@ -80,38 +80,6 @@ VentureScope is a sophisticated business analysis platform that leverages Google
 | **API Communication** | Server-Sent Events (SSE) |
 | **CORS** | FastAPI CORS middleware |
 | **Environment** | Environment variables |
-
----
-
-## 📁 Project Structure
-
-```
-google-cloud-agent-development-kit-hackathon-2025/
-├── backend/                    # Python FastAPI backend
-│   ├── src/
-│   │   ├── agents/            # AI agent implementations
-│   │   │   ├── google/        # Google search & analysis agent
-│   │   │   └── reddit/        # Reddit sentiment analysis agent
-│   │   └── main.py            # FastAPI application entry point
-│   ├── utils/                 # Utility functions
-│   │   ├── models.py          # Google Cloud API integrations
-│   │   └── requests.py        # HTTP request utilities
-│   ├── requirements.txt       # Python dependencies
-│   ├── setup.py              # Package setup
-│   └── vercel.json           # Vercel deployment config
-├── client/                    # Next.js React frontend
-│   ├── src/
-│   │   ├── app/              # App router pages
-│   │   ├── components/       # React components
-│   │   │   ├── analysis/     # Analysis-related components
-│   │   │   ├── layout/       # Layout components
-│   │   │   └── ui/           # UI components
-│   │   ├── hooks/            # Custom React hooks
-│   │   └── types/            # TypeScript type definitions
-│   ├── package.json          # Node.js dependencies
-│   └── next.config.ts        # Next.js configuration
-└── assets/                   # Project assets
-```
 
 ---
 
